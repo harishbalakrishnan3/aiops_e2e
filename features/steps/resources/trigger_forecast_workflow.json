@@ -1,0 +1,23 @@
+{
+  "subscriber": "RAVPN_MAX_SESSIONS_BREACH_FORECAST",
+  "trigger-type": "SCHEDULE_TICKS",
+  "config": {
+    "periodicity": "INTERVAL_24_HOURS"
+  },
+  "pipeline": {
+    "output": [
+      {
+        "plugin": "SNS",
+        "config": {
+          "destination": "ai-ops-forecast"
+        }
+      }
+    ],
+    "processor": []
+  },
+  "deviceIds": [
+    "6c23d3f8-ad50-11ef-b126-c20ebea053ff"
+  ],
+  "timestamp": "2024-08-21T05:55:00.000",
+  "attributes": {}
+}
