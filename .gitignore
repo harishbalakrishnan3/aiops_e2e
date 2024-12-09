@@ -1,3 +1,4 @@
 .idea
+.env
 utils/historical_data.txt
 utils/data/*
