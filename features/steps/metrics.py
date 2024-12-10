@@ -81,8 +81,9 @@ def instant_remote_write(metric_name: str, labels: dict[str, str], value: float)
     metrics_data = memory_reader.get_metrics_data()
     try:
         remote_write(metrics_data=metrics_data)
-    except Exception as e:
+    except Exception:
         print(f"Failed to export metric {metric_name} with labels {labels} and value {value}")
+        return
     print(f"Exported metric {metric_name} with labels {labels} and value {value} succesfully")
 
 
