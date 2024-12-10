@@ -38,8 +38,9 @@ def batch_remote_write(synthesized_ts: Dict[str, Any], step: timedelta):
     labels = synthesized_ts["labels"]
 
     data_points = []
+    current_time = time.time_ns()
     for i, value in enumerate(values):
-        timestamp = int(time.time_ns() - len(values) * step.total_seconds() * 1e9 + i * step.total_seconds() * 1e9)
+        timestamp = int(current_time - len(values) * step.total_seconds() * 1e9 + i * step.total_seconds() * 1e9)
         data_points.append(NumberDataPoint(
             time_unix_nano=timestamp,
             start_time_unix_nano=timestamp,
