@@ -2,6 +2,7 @@ import os
 from datetime import datetime, timedelta
 
 import jwt
+from behave.model_core import Status
 
 from dotenv import load_dotenv
 
@@ -34,6 +35,9 @@ def before_all(context):
     # Decide if the RAVPN feature should run
     context.run_ravpn_feature = should_ravpn_feature_run()
 
+    # Initialize a flag to track failures
+    context.stop_execution = False
+
 
 def get_device_id(context):
     devices_details = get(get_endpoints().DEVICES_DETAILS_URL)
@@ -50,6 +54,14 @@ def before_feature(context, feature):
         print("Skipping the RAVPN feature as there is some data in Grafana the last 14 days.")
         feature.skip()
 
+
+def before_scenario(context, scenario):
+    if context.stop_execution:
+        scenario.skip("Skipping scenario due to a previous failure.")
+
+def after_scenario(context, scenario):
+    if scenario.status == Status.failed:
+        context.stop_execution = True
 
 def should_ravpn_feature_run():
     # Calculate the start and end times
