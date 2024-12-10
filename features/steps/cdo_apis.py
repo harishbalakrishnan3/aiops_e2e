@@ -1,8 +1,11 @@
 import json
 import os
-
+from datetime import datetime
 import requests
-
+from opentelemetry.exporter.prometheus_remote_write import (
+    PrometheusRemoteWriteMetricsExporter,
+)
+from opentelemetry.sdk.metrics.export import MetricsData, MetricExportResult
 from features.steps.env import get_endpoints
 
 endpoints = get_endpoints()
@@ -15,6 +18,19 @@ def get_insights():
 def delete_insights():
     delete(endpoints.INSIGHTS_URL)
 
+def remote_write(metrics_data:MetricsData):
+    exporter = PrometheusRemoteWriteMetricsExporter(
+        endpoint=get_endpoints().DATA_INGEST_URL,
+        headers={"Authorization": "Bearer " + os.getenv('CDO_TOKEN')},
+    )
+
+    result = exporter.export(metrics_data)
+    if result == MetricExportResult.FAILURE:
+        print(f"Failed to export metric data")
+        raise Exception("Failed to export metric data")
+    else:
+        print(
+            f"Exported metrics at {datetime.now().strftime('%d-%m-%Y %H:%M:%S')}")
 
 def verify_insight_type_and_state(insight_type, state):
     insights = get_insights()
