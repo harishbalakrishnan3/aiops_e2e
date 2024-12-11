@@ -8,7 +8,7 @@ from mockseries.seasonality import DailySeasonality
 from mockseries.trend import LinearTrend
 import time
 
-from features.steps.env import Path
+from features.steps.env import get_endpoints
 from opentelemetry.exporter.prometheus_remote_write import (
     PrometheusRemoteWriteMetricsExporter,
 )
@@ -53,7 +53,7 @@ def generate_ts(trend_config, seasonality_config, noise_config, time_points):
 
 
 def batch_remote_write(synthesized_ts: Dict[str, Any], step: timedelta):
-    url = "https://edge.staging.cdo.cisco.com/api/platform/ai-ops-data-ingest/v1/healthmetrics"
+    url = get_endpoints().DATA_INGEST_URL
     exporter = PrometheusRemoteWriteMetricsExporter(
         endpoint=url,
         headers={"Authorization": "Bearer " + os.getenv('CDO_TOKEN')},

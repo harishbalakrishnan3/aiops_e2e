@@ -2,3 +2,6 @@
 .env
 utils/historical_data.txt
 utils/data/*
+utils/mimirtool
+utils/promtool
+utils/prometheus

@@ -38,6 +38,9 @@ def before_all(context):
     # Initialize a flag to track failures
     context.stop_execution = False
 
+    # Get the remote write config for GCM
+    context.remote_write_config = get_gcm_remote_write_config()
+
 
 def get_device_id(context):
     devices_details = get(get_endpoints().DEVICES_DETAILS_URL)
@@ -82,3 +85,12 @@ def should_ravpn_feature_run():
         return False
 
     return True
+
+
+def get_gcm_remote_write_config():
+    gcm_stack_config = get(get_endpoints().TENANT_GCM_STACK_CONFIG_URL)
+    return {
+        "url": '/'.join([gcm_stack_config['hmInstancePromUrl'], 'api/prom/push']),
+        "username": gcm_stack_config['hmInstancePromId'],
+        "password": gcm_stack_config['prometheusToken']
+    }

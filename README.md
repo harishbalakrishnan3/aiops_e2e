@@ -1,4 +1,4 @@
-# e2e
+# AIOps E2E Testing
 End-to-End tests for AIOps
 
 ### Installation of Python Dependencies
@@ -11,17 +11,12 @@ poetry install
 ### Pre-requisites for Behave Tests
 
 1. Add your CDO token in `.env` file located at the project root directory.
-2. Install [promtool](https://prometheus.io/docs/prometheus/latest/command-line/promtool/)
-   and [mimirtool](https://grafana.com/docs/mimir/latest/manage/tools/mimirtool/). This is
-   required for backfilling metrics to Grafana.
-
-   i. To install mimirtool, follow the instructions
-   mentioned [here](https://grafana.com/docs/mimir/latest/manage/tools/mimirtool/#installation). Ensure promtool is
-   added in your PATH.
-
-   ii. To install promtool, download the latest stable version of Prometheus artifacts that are compatible with your OS
-   and architecture from [here](https://github.com/prometheus/prometheus/releases). Untar the downloaded file and copy
-   the `promtool` binary to `/usr/local/bin` or any other directory in your PATH.
+2. Download and install promtool and mimirtool by running the shell scripts located in the `utils` directory.
+```bash
+cd utils
+sh ./download_promtool.sh
+sh ./download_mimirtool.sh
+```
 
 ### Running Behave Tests
 
