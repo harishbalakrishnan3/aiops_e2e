@@ -6,4 +6,4 @@ Feature: Testing RA-VPN forecasting
     And the insights are cleared
     When backfill RAVPN metrics for a suitable device
     And trigger the RAVPN forecasting workflow
-    Then verify if an RAVPN_MAX_SESSIONS_BREACH_FORECAST insight with state ACTIVE is created with a timeout of 10 minutes
+    Then verify if an RAVPN_MAX_SESSIONS_BREACH_FORECAST insight with state ACTIVE is created with a timeout of 10 minute(s)

@@ -132,7 +132,7 @@ def generate_timeseries():
 
 def get_device_id():
     # Get cdFMC UID
-    resp = get(get_endpoints().FMC_DETAILS_URL)
+    resp = get(get_endpoints().FMC_DETAILS_URL , print_body=False)
     uid = ""
     for d in resp:
         uid = d['uid']

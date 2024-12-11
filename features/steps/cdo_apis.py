@@ -12,7 +12,7 @@ endpoints = get_endpoints()
 
 
 def get_insights():
-    return get(endpoints.INSIGHTS_URL)
+    return get(endpoints.INSIGHTS_URL , print_body=False)
 
 
 def delete_insights():
@@ -50,7 +50,7 @@ def post_onboard_action(action):
 
 
 def get_onboard_status():
-    return get(endpoints.TENANT_ONBOARD_URL)
+    return get(endpoints.TENANT_ONBOARD_URL , print_body=False)
 
 
 def get(endpoint, print_body=True):
