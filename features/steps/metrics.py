@@ -1,15 +1,16 @@
-import os
 import time
-from datetime import datetime
-
+from typing import Any, Dict
+from datetime import timedelta
 from behave import *
 from opentelemetry import metrics
-from opentelemetry.exporter.prometheus_remote_write import PrometheusRemoteWriteMetricsExporter
+from cdo_apis import remote_write
+from features.steps.utils import get_label_map , convert_str_list_to_dict
+from opentelemetry.sdk.metrics._internal.point import ResourceMetrics , ScopeMetrics,Metric,Gauge, NumberDataPoint
+from opentelemetry.sdk.util.instrumentation import InstrumentationScope
+from opentelemetry.sdk.metrics.export import MetricsData
 from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics._internal.export import InMemoryMetricReader, MetricExportResult
+from opentelemetry.sdk.metrics._internal.export import InMemoryMetricReader
 from opentelemetry.sdk.resources import Resource
-
-from features.steps.env import get_endpoints
 
 memory_reader = InMemoryMetricReader()
 meter_provider = MeterProvider(
@@ -32,30 +33,59 @@ def create_gauge(name: str, description: str):
 active_metrics = {}
 
 
-def remote_write(context, metric_name: str, labels: dict[str, str], value: float):
+def batch_remote_write(synthesized_ts: Dict[str, Any], step: timedelta):
+    values = synthesized_ts["values"]
+    labels = synthesized_ts["labels"]
+
+    data_points = []
+    current_time = time.time_ns()
+    for i, value in enumerate(values):
+        timestamp = int(current_time - len(values) * step.total_seconds() * 1e9 + i * step.total_seconds() * 1e9)
+        data_points.append(NumberDataPoint(
+            time_unix_nano=timestamp,
+            start_time_unix_nano=timestamp,
+            value=value,
+            attributes=labels,
+        ))
+
+    resource_metric = ResourceMetrics(
+        resource=Resource.get_empty(),
+        schema_url="",
+        scope_metrics=[
+            ScopeMetrics(
+                scope=InstrumentationScope(name="sample_scope"),
+                metrics=[
+                    Metric(
+                        name=synthesized_ts["metric_name"],
+                        description="",
+                        data=Gauge(data_points=data_points),
+                        unit="",
+                    ),
+                ],
+                schema_url="",
+            )
+        ]
+    )
+
+    metrics_data_now = MetricsData(
+        resource_metrics=[resource_metric]
+    )
+
+    remote_write(metrics_data=metrics_data_now)
+
+def instant_remote_write(metric_name: str, labels: dict[str, str], value: float):
     if metric_name not in active_metrics:
         create_gauge(metric_name, "Gauge metric")
 
-    if "tenant_uuid" not in labels:
-        labels["tenant_uuid"] = context.tenant_id
-
-    if "uuid" not in labels:
-        labels["uuid"] = context.device_id
-
     active_metrics[metric_name].set(float(value), labels)
 
-    exporter = PrometheusRemoteWriteMetricsExporter(
-        endpoint=get_endpoints().DATA_INGEST_URL,
-        headers={"Authorization": "Bearer " + os.getenv('CDO_TOKEN')},
-    )
-
     metrics_data = memory_reader.get_metrics_data()
-    result = exporter.export(metrics_data)
-    if result == MetricExportResult.FAILURE:
+    try:
+        remote_write(metrics_data=metrics_data)
+    except Exception:
         print(f"Failed to export metric {metric_name} with labels {labels} and value {value}")
-    else:
-        print(
-            f"Exported metric {metric_name} with labels {labels} and value {value} at {datetime.now().strftime('%d-%m-%Y %H:%M:%S')}")
+        return
+    print(f"Exported metric {metric_name} with labels {labels} and value {value} succesfully")
 
 
 @step('ingest the following metrics for {duration} minutes')
@@ -65,18 +95,13 @@ def step_impl(context, duration):
             labels = {}
             increment_params = {}
             if row['labels'] != '':
-                labels = convert_str_list_to_dict(row['labels'])
+                labels = get_label_map(context , row['labels'])
             if row['increment_params'] != '':
                 increment_params = convert_str_list_to_dict(row['increment_params'])
             current_value = calculate_current_value(float(row['start_value']), row['increment_type'],
                                                     increment_params, i)
-            remote_write(context, row['metric_name'], labels, current_value)
+            instant_remote_write(row['metric_name'], labels, current_value)
         time.sleep(60)
-
-
-def convert_str_list_to_dict(s):
-    return dict(map(lambda x: (x.split('=')[0].strip(), x.split('=')[1].strip()), s.split(',')))
-
 
 def calculate_current_value(start_value: float, increment_type: str, increment_params: dict[str, str],
                             current_time: int):

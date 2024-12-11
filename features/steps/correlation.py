@@ -1,49 +1,15 @@
 import time
-
 from behave import *
 from typing import Any
-from features.steps.metrics import remote_write
+from features.steps.metrics import instant_remote_write
 from datetime import datetime
 from mockseries.utils import datetime_range
 from datetime import timedelta
 from mockseries.noise import RedNoise
 from mockseries.transition import LinearTransition
 from mockseries.trend import Switch
-from features.steps.utils import batch_remote_write
-from utils import get_label_values
-
-
-def generate_synthesized_ts_obj(context, metric_name: str, label_string: str, start_value: float, end_value: float,
-                                spike_duration_minutes: int, start_spike_minute: int, duration: int):
-    linear_transition = LinearTransition(
-        transition_window=timedelta(minutes=spike_duration_minutes),
-    )
-
-    now = datetime.now()
-    speed_switch = Switch(
-        start_time=now + timedelta(minutes=start_spike_minute),
-        base_value=start_value,
-        switch_value=end_value,
-        transition=linear_transition
-    )
-
-    noise = RedNoise(mean=0, std=2, correlation=0.5)
-
-    time_series = speed_switch + noise
-
-    time_points = datetime_range(
-        granularity=timedelta(minutes=1),
-        start_time=now,
-        end_time=now + timedelta(minutes=duration),
-    )
-    ts_values = time_series.generate(time_points=time_points)
-
-    return {
-        "metric_name": metric_name,
-        "values": ts_values,
-        "labels": get_label_values(context, label_string)
-    }
-
+from features.steps.utils import get_label_map
+from features.steps.metrics import batch_remote_write
 
 @then('push timeseries for next {duration} minutes of which send last {live_duration} minute(s) of timeseries in live mode')
 def step_impl(context, duration , live_duration):
@@ -88,9 +54,40 @@ def step_impl(context, duration , live_duration):
 
         print("Pushing data for instant: ", data_for_current_instant)
         for data in data_for_current_instant:
-            remote_write(context ,data["metric_name"] , data["labels"] , data["value"])
+            instant_remote_write(data["metric_name"] , data["labels"] , data["value"])
         time.sleep(60)
 
+
+def generate_synthesized_ts_obj(context, metric_name: str, label_string: str, start_value: float, end_value: float,
+                                spike_duration_minutes: int, start_spike_minute: int, duration: int):
+    linear_transition = LinearTransition(
+        transition_window=timedelta(minutes=spike_duration_minutes),
+    )
+
+    now = datetime.now()
+    speed_switch = Switch(
+        start_time=now + timedelta(minutes=start_spike_minute),
+        base_value=start_value,
+        switch_value=end_value,
+        transition=linear_transition
+    )
+
+    noise = RedNoise(mean=0, std=2, correlation=0.5)
+
+    time_series = speed_switch + noise
+
+    time_points = datetime_range(
+        granularity=timedelta(minutes=1),
+        start_time=now,
+        end_time=now + timedelta(minutes=duration),
+    )
+    ts_values = time_series.generate(time_points=time_points)
+
+    return {
+        "metric_name": metric_name,
+        "values": ts_values,
+        "labels": get_label_map(context, label_string)
+    }
 
 def split_data_for_batch_and_live_ingestion(synthesized_ts_list: [dict[str, Any]], live_duration: int):
     data_split_index = len(synthesized_ts_list[0]["values"]) - live_duration
@@ -110,10 +107,3 @@ def split_data_for_batch_and_live_ingestion(synthesized_ts_list: [dict[str, Any]
             "labels": synthesized_ts["labels"]
         })
     return [synthesized_ts_list_for_batch_fill, synthesized_ts_list_for_live_fill]
-
-
-def create_linear_ts(slope, intercept, points):
-    ts = []
-    for i in range(1, points + 1):
-        ts.append(slope * i + intercept)
-    return ts

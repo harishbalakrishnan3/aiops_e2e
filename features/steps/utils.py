@@ -1,14 +1,12 @@
 import copy
-import os
 from datetime import timedelta
-from typing import Any, Dict
 
 from mockseries.noise import GaussianNoise
 from mockseries.seasonality import DailySeasonality
 from mockseries.trend import LinearTrend
 import time
 
-from features.steps.env import get_endpoints
+from features.steps.env import Path
 from opentelemetry.exporter.prometheus_remote_write import (
     PrometheusRemoteWriteMetricsExporter,
 )
@@ -26,20 +24,19 @@ def store_ts_in_context(context, labels, key, metric_name):
     context.timeseries[metric_name][key] = ts
     print(f"Timeseries in context: {context.timeseries}")
 
-def get_label_values(context, label_string: str):
-    if context.tenant_id is None:
+def get_label_map(context, label_string: str):
+    label_map = convert_str_list_to_dict(label_string)
+    if "tenant_uuid" not in label_map and context.tenant_id is None:
         raise Exception("Tenant ID not found in context")
-    if context.device_id is None:
+    if "uuid" not in label_map and context.device_id is None:
         raise Exception("Device ID not found in context")
-    label_values = {
+    return label_map | {
         "tenant_uuid": context.tenant_id,
         "uuid": context.device_id
     }
-    for label in label_string.split(","):
-        label = label.strip()
-        key, value = label.split("=")
-        label_values[key] = value
-    return label_values
+
+def convert_str_list_to_dict(s):
+    return dict(map(lambda x: (x.split('=')[0].strip(), x.split('=')[1].strip()), s.split(',')))
 
 
 def generate_ts(trend_config, seasonality_config, noise_config, time_points):
@@ -53,7 +50,7 @@ def generate_ts(trend_config, seasonality_config, noise_config, time_points):
 
 
 def batch_remote_write(synthesized_ts: Dict[str, Any], step: timedelta):
-    url = get_endpoints().DATA_INGEST_URL
+    url = "https://edge.staging.cdo.cisco.com/api/platform/ai-ops-data-ingest/v1/healthmetrics"
     exporter = PrometheusRemoteWriteMetricsExporter(
         endpoint=url,
         headers={"Authorization": "Bearer " + os.getenv('CDO_TOKEN')},
