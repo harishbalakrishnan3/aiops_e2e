@@ -43,7 +43,7 @@ def before_all(context):
 
 
 def get_device_id(context):
-    devices_details = get(get_endpoints().DEVICES_DETAILS_URL)
+    devices_details = get(get_endpoints().DEVICES_DETAILS_URL , print_body=False)
     for device in devices_details:
         if 'metadata' in device.keys() and 'deviceRecordUuid' in device['metadata'].keys():
             print(f"Found FTD device with UUID {device['metadata']['deviceRecordUuid']}")
