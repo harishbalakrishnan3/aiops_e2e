@@ -1,8 +1,10 @@
 Feature: Correlation testing
+  Background: 
+    Given the tenant onboard state is ONBOARDED
+    And the insights are cleared
   # This feature tests if the desired alerts are raised for various correlation scenarios
   # Firing Test scenarios
   Scenario: Push data and test correlation alerts for CPU_LINA_THRESHOLD_BREACH
-    Given the insights are cleared
     Then push timeseries for 60 minute(s) of which send last 6 minute(s) of timeseries in live mode
       | metric_name            | label_values                              | start_value | end_value | start_spike_minute | spike_duration_minutes |
       | cpu                    | cpu=lina_dp_avg                           | 5           | 85        | 1                  | 55                     |
@@ -18,7 +20,6 @@ Feature: Correlation testing
     Then verify if an CPU_LINA_THRESHOLD_BREACH insight with state RESOLVED is created with a timeout of 10 minute(s)
 
   Scenario: Push data and test correlation alerts for CPU_SNORT_THRESHOLD_BREACH
-    Given the insights are cleared
     Then push timeseries for 60 minute(s) of which send last 6 minute(s) of timeseries in live mode
       | metric_name | label_values                                     | start_value | end_value | start_spike_minute | spike_duration_minutes |
       | cpu         | cpu=snort_avg                                    | 5           | 85        | 1                  | 55                     |
@@ -35,7 +36,6 @@ Feature: Correlation testing
     Then verify if an CPU_SNORT_THRESHOLD_BREACH insight with state RESOLVED is created with a timeout of 10 minute(s)
 
   Scenario: Push data and test correlation alerts for MEMORY_LINA_THRESHOLD_BREACH
-    Given the insights are cleared
     Then push timeseries for 60 minute(s) of which send last 6 minute(s) of timeseries in live mode
       | metric_name            | label_values                              | start_value | end_value | start_spike_minute | spike_duration_minutes |
       | mem                    | mem=used_percentage_lina                  | 5           | 85        | 1                  | 55                     |
@@ -50,7 +50,6 @@ Feature: Correlation testing
     Then verify if an MEMORY_LINA_THRESHOLD_BREACH insight with state RESOLVED is created with a timeout of 10 minute(s)
 
   Scenario: Push data and test correlation alerts for MEMORY_SNORT_THRESHOLD_BREACH
-    Given the insights are cleared
     Then push timeseries for 60 minute(s) of which send last 6 minute(s) of timeseries in live mode
       | metric_name | label_values                              | start_value | end_value | start_spike_minute | spike_duration_minutes |
       | mem         | mem=used_percentage_snort                 | 5           | 85        | 1                  | 55                     |
