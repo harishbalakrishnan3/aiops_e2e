@@ -38,7 +38,7 @@ def step_impl(context):
     common_labels = {
         "instance": "127.0.0.2:9273",
         "job": "metrics_generator:8123",
-        "uuid": get_device_id(),
+        "uuid": context.device_id,
         "tenant_uuid": context.tenant_id
     }
     labels_1 = {**common_labels, "vpn": "active_ravpn_tunnels"}
@@ -68,15 +68,15 @@ def step_impl(context):
     start_time_epoch = int(start_time.timestamp())
     end_time_epoch = int(end_time.timestamp())
 
-    query = "?query=" + metric_name + "&start=" + str(start_time_epoch) + "&end=" + str(
-        end_time_epoch) + "&step=5m"
+    query = f"?query=vpn{{uuid=\"{context.device_id}\"}}&start={start_time_epoch}&end={end_time_epoch}&step=5m"
+
     endpoint = get_endpoints().PROMETHEUS_RANGE_QUERY_URL + query
 
     count = 0
     success = False
     while True:
-        # Exit after 30 minutes
-        if count > 30:
+        # Exit after 60 minutes
+        if count > 60:
             print("Data not ingested in Prometheus. Exiting.")
             break
 
@@ -84,7 +84,7 @@ def step_impl(context):
 
         # Check for data in Prometheus
         response = get(endpoint)
-        if len(response["data"]["result"]) > 0:
+        if len(response["data"]["result"][0]["values"]) > 3500 and len(response["data"]["result"][1]["values"]) > 3500:
             success = True
             break
 
@@ -95,12 +95,30 @@ def step_impl(context):
 
 @step('trigger the RAVPN forecasting workflow')
 def step_impl(context):
-    payload = ""
-    trigger_payload_file = os.path.join(Path.BEHAVE_FEATURES_ROOT, "resources", "trigger_forecast_workflow.json")
-    with open(trigger_payload_file, 'r') as file:
-        payload = file.read()
-
-    post(get_endpoints().TRIGGER_MANAGER_URL, payload)
+    payload = {
+        "subscriber": "RAVPN_MAX_SESSIONS_BREACH_FORECAST",
+        "trigger-type": "SCHEDULE_TICKS",
+        "config": {
+            "periodicity": "INTERVAL_24_HOURS"
+        },
+        "pipeline": {
+            "output": [
+                {
+                    "plugin": "SNS",
+                    "config": {
+                        "destination": "ai-ops-forecast"
+                    }
+                }
+            ],
+            "processor": []
+        },
+        "deviceIds": [
+            context.device_id
+        ],
+        "timestamp": "2024-08-21T05:55:00.000",
+        "attributes": {}
+    }
+    post(get_endpoints().TRIGGER_MANAGER_URL, json.dumps(payload))
 
 
 def generate_timeseries():
@@ -128,41 +146,3 @@ def generate_timeseries():
     )
     ts_values = timeseries.generate(time_points=time_points)
     return ts_values, time_points
-
-
-def get_device_id():
-    # Get cdFMC UID
-    resp = get(get_endpoints().FMC_DETAILS_URL , print_body=False)
-    uid = ""
-    for d in resp:
-        uid = d['uid']
-
-    if uid == "":
-        raise Exception("FMCE device not found")
-
-    # Get the device id for which VPN is enabled
-    req = {
-        "deviceUid": uid,
-        "request": {
-            "commands": [
-                {
-                    "method": "GET",
-                    "link": "/api/fmc_config/v1/domain/e276abec-e0f2-11e3-8169-6d9ed49b625f/health/ravpngateways",
-                    "body": ""
-                }
-            ]
-        }
-    }
-
-    resp = post(get_endpoints().DEVICE_GATEWAY_COMMAND_URL, json.dumps(req))
-    print(resp.json())
-    resp_body = json.loads(resp.json()['data']['responseBody'])
-
-    device_id = ""
-    for item in resp_body:
-        device_id = item['device']['id']
-
-    if device_id == "":
-        raise Exception("RA-VPN gateway not found")
-
-    return device_id
