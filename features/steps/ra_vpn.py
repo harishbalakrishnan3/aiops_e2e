@@ -83,8 +83,12 @@ def step_impl(context):
         count += 1
 
         # Check for data in Prometheus
-        response = get(endpoint)
-        if len(response["data"]["result"][0]["values"]) > 3500 and len(response["data"]["result"][1]["values"]) > 3500:
+        response = get(endpoint, print_body=False)
+        num_data_points_active_ravpn = len(response["data"]["result"][0]["values"])
+        num_data_points_inactive_ravpn = len(response["data"]["result"][1]["values"])
+        print(
+            f"Active RAVPN data points: {num_data_points_active_ravpn}. Inactive RAVPN data points: {num_data_points_inactive_ravpn}")
+        if num_data_points_active_ravpn > 3500 and num_data_points_inactive_ravpn > 3500:
             success = True
             break
 

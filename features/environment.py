@@ -30,8 +30,8 @@ def before_all(context):
         decoded = jwt.decode(cdo_token, options={"verify_signature": False})
         context.tenant_id = decoded['parentId']
 
-    # Add the device id to the context
-    context.device_id = get_device_id(context)
+    # Update the device details such as its name, id and aegis record id in context
+    update_device_details(context)
 
     # Initialize a flag to track failures
     context.stop_execution = False
@@ -40,7 +40,7 @@ def before_all(context):
     context.remote_write_config = get_gcm_remote_write_config()
 
 
-def get_device_id(context):
+def update_device_details(context):
     # Get cdFMC UID
     resp = get(get_endpoints().FMC_DETAILS_URL, print_body=False)
     uid = ""
@@ -70,10 +70,18 @@ def get_device_id(context):
 
     for item in resp_body:
         device_id = item['device']['id']
+        device_name = item['device']['name']
+
         # Check if there is data in the last 15 days
         if can_run_ravpn_feature(device_id):
-            print(f"Found a suitable FTD device {item['device']['name']} with UUID {device_id}")
-            return device_id
+            context.device_id = device_id
+            context.device_name = device_name
+            query = f"?q=metadata.deviceRecordUuid:{device_id}"
+            device_details = get(get_endpoints().DEVICES_DETAILS_URL + query, print_body=False)
+            context.aegis_device_record_id = device_details[0]['uid']
+            print(
+                f"Found a suitable FTD device {device_name} with UUID {device_id} and record ID {context.aegis_device_record_id}")
+            return
 
     raise Exception("RA-VPN gateway not found")
 

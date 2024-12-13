@@ -8,6 +8,7 @@ from datetime import timedelta
 from features.steps.metrics import instant_remote_write
 from features.steps.utils import generate_synthesized_ts_obj, split_data_for_batch_and_live_ingestion
 
+
 @step('the insights are cleared')
 def step_impl(context):
     delete_insights()
@@ -15,13 +16,13 @@ def step_impl(context):
 
 @step('verify if an {insight_type} insight with state {insight_state} is created')
 def step_impl(context, insight_type, insight_state):
-    assert_that(verify_insight_type_and_state(insight_type, insight_state))
+    assert_that(verify_insight_type_and_state(context, insight_type, insight_state))
 
 
 @step('verify if an {insight_type} insight with state {insight_state} is created with a timeout of {timeout} minute(s)')
 def step_impl(context, insight_type, insight_state, timeout):
     for i in range(int(timeout)):
-        if verify_insight_type_and_state(insight_type, insight_state):
+        if verify_insight_type_and_state(context, insight_type, insight_state):
             assert_that(True)
             return
         time.sleep(60)
@@ -37,8 +38,10 @@ def step_impl(context, duration, unit):
     else:
         raise Exception(f"Unsupported unit: {unit}")
 
-@then('push timeseries for {duration} minute(s) of which send last {live_duration} minute(s) of timeseries in live mode')
-def step_impl(context, duration , live_duration):
+
+@then(
+    'push timeseries for {duration} minute(s) of which send last {live_duration} minute(s) of timeseries in live mode')
+def step_impl(context, duration, live_duration):
     synthesized_ts_list = []
     duration = int(duration)
     live_duration = int(live_duration)
@@ -61,7 +64,7 @@ def step_impl(context, duration , live_duration):
         synthesized_ts_list.append(synthesized_ts_obj)
 
     [synthesized_ts_list_for_batch_fill, synthesized_ts_list_for_live_fill] = split_data_for_batch_and_live_ingestion(
-        synthesized_ts_list , live_duration)
+        synthesized_ts_list, live_duration)
     # batch data fill
     for synthesized_data in synthesized_ts_list_for_batch_fill:
         batch_remote_write(synthesized_data, timedelta(minutes=1))
@@ -79,5 +82,5 @@ def step_impl(context, duration , live_duration):
             })
 
         for data in data_for_current_instant:
-            instant_remote_write(data["metric_name"] , data["labels"] , data["value"])
+            instant_remote_write(data["metric_name"], data["labels"], data["value"])
         time.sleep(60)

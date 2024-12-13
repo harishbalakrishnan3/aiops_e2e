@@ -14,13 +14,14 @@ endpoints = get_endpoints()
 
 
 def get_insights():
-    return get(endpoints.INSIGHTS_URL , print_body=False)
+    return get(endpoints.INSIGHTS_URL, print_body=False)
 
 
 def delete_insights():
     delete(endpoints.INSIGHTS_URL)
 
-def remote_write(metrics_data:MetricsData):
+
+def remote_write(metrics_data: MetricsData):
     exporter = PrometheusRemoteWriteMetricsExporter(
         endpoint=get_endpoints().DATA_INGEST_URL,
         headers={"Authorization": "Bearer " + os.getenv('CDO_TOKEN')},
@@ -34,12 +35,15 @@ def remote_write(metrics_data:MetricsData):
         print(
             f"Exported metrics at {datetime.now().strftime('%d-%m-%Y %H:%M:%S')}")
 
-def verify_insight_type_and_state(insight_type, state):
+
+def verify_insight_type_and_state(context, insight_type, state):
     insights = get_insights()
     if insights['count'] == 0:
         return False
     for insights in insights['items']:
-        if insights['type'] == insight_type and insights['state'] == state:
+        if insights['type'] == insight_type and insights['state'] == state and insights['primaryImpactedResources'][
+            0]['uid'] == context.aegis_device_record_id and insights['primaryImpactedResources'][0][
+            'name'] == context.device_name:
             return True
     return False
 
@@ -52,7 +56,7 @@ def post_onboard_action(action):
 
 
 def get_onboard_status():
-    return get(endpoints.TENANT_ONBOARD_URL , print_body=False)
+    return get(endpoints.TENANT_ONBOARD_URL, print_body=False)
 
 
 def get(endpoint, print_body=True):
@@ -67,7 +71,7 @@ def get(endpoint, print_body=True):
         session = requests.Session()
         session.mount('https://', adapter)
         response = session.get(endpoint, headers={"Content-Type": "application/json",
-                                                   "Authorization": "Bearer " + os.getenv('CDO_TOKEN')}, timeout=180)
+                                                  "Authorization": "Bearer " + os.getenv('CDO_TOKEN')}, timeout=180)
         response_payload = response.json()
         if print_body:
             print("Response: ", response_payload)
@@ -90,14 +94,14 @@ def post(endpoint, payload=None, expected_return_code=200):
         session = requests.Session()
         session.mount('https://', adapter)
         response = session.post(endpoint, data=payload, headers={"Content-Type": "application/json",
-                                                                  "Authorization": "Bearer " + os.getenv('CDO_TOKEN')}, timeout=180)
+                                                                 "Authorization": "Bearer " + os.getenv('CDO_TOKEN')},
+                                timeout=180)
         print("Response: ", response)
         assert response.status_code == expected_return_code, f"POST request to {endpoint} failed with status code {response.status_code}"
         return response
     except Exception as e:
         print(f"Failed to send POST request to {endpoint} with payload {payload}")
         raise e
-
 
 
 def delete(endpoint, expected_return_code=200):
