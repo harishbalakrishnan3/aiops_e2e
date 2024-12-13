@@ -7,6 +7,8 @@ from opentelemetry.exporter.prometheus_remote_write import (
 )
 from opentelemetry.sdk.metrics.export import MetricsData, MetricExportResult
 from features.steps.env import get_endpoints
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 
 endpoints = get_endpoints()
 
@@ -54,27 +56,64 @@ def get_onboard_status():
 
 
 def get(endpoint, print_body=True):
-    print(f"Sending GET request to {endpoint}")
-    response = requests.get(endpoint, headers={"Content-Type": "application/json",
-                                               "Authorization": "Bearer " + os.getenv('CDO_TOKEN')})
-    response_payload = response.json()
-    if print_body:
-        print("Response: ", response_payload)
-    assert response.status_code == 200, f"GET request to {endpoint} failed with status code {response.status_code}"
-    return response_payload
+    try:
+        print(f"Sending GET request to {endpoint}")
+        retry = Retry(
+            total=3,
+            backoff_factor=2,
+            status_forcelist=[i for i in range(400, 600)],
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        session = requests.Session()
+        session.mount('https://', adapter)
+        response = session.get(endpoint, headers={"Content-Type": "application/json",
+                                                   "Authorization": "Bearer " + os.getenv('CDO_TOKEN')}, timeout=180)
+        response_payload = response.json()
+        if print_body:
+            print("Response: ", response_payload)
+        assert response.status_code == 200, f"GET request to {endpoint} failed with status code {response.status_code}"
+        return response_payload
+    except Exception as e:
+        print(f"Failed to send GET request to {endpoint}")
+        raise e
 
 
 def post(endpoint, payload=None, expected_return_code=200):
-    print(f"Sending POST request to {endpoint} with payload {payload}")
-    response = requests.post(endpoint, data=payload, headers={"Content-Type": "application/json",
-                                                              "Authorization": "Bearer " + os.getenv('CDO_TOKEN')})
-    print("Response: ", response)
-    assert response.status_code == expected_return_code, f"POST request to {endpoint} failed with status code {response.status_code}"
-    return response
+    try:
+        print(f"Sending POST request to {endpoint} with payload {payload}")
+        retry = Retry(
+            total=3,
+            backoff_factor=2,
+            status_forcelist=[i for i in range(400, 600)],
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        session = requests.Session()
+        session.mount('https://', adapter)
+        response = session.post(endpoint, data=payload, headers={"Content-Type": "application/json",
+                                                                  "Authorization": "Bearer " + os.getenv('CDO_TOKEN')}, timeout=180)
+        print("Response: ", response)
+        assert response.status_code == expected_return_code, f"POST request to {endpoint} failed with status code {response.status_code}"
+        return response
+    except Exception as e:
+        print(f"Failed to send POST request to {endpoint} with payload {payload}")
+        raise e
+
 
 
 def delete(endpoint, expected_return_code=200):
-    print(f"Sending DELETE request to {endpoint}")
-    response = requests.delete(endpoint, headers={"Authorization": "Bearer " + os.getenv('CDO_TOKEN')})
-    print("Response: ", response)
-    assert response.status_code == expected_return_code, f"DELETE request to {endpoint} failed with status code {response.status_code}"
+    try:
+        print(f"Sending DELETE request to {endpoint}")
+        retry = Retry(
+            total=3,
+            backoff_factor=2,
+            status_forcelist=[i for i in range(400, 600)],
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        session = requests.Session()
+        session.mount('https://', adapter)
+        response = session.delete(endpoint, headers={"Authorization": "Bearer " + os.getenv('CDO_TOKEN')}, timeout=180)
+        print("Response: ", response)
+        assert response.status_code == expected_return_code, f"DELETE request to {endpoint} failed with status code {response.status_code}"
+    except Exception as e:
+        print(f"Failed to send DELETE request to {endpoint}")
+        raise e
