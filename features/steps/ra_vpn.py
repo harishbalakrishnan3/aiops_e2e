@@ -33,9 +33,9 @@ def step_impl(context):
 
     metric_name = "vpn"
     common_labels = {
-        "instance": "127.0.0.2:9273",
-        "job": "metrics_generator:8123",
-    } | get_common_labels(context , timedelta(days=7))
+                        "instance": "127.0.0.2:9273",
+                        "job": "metrics_generator:8123",
+                    } | get_common_labels(context, timedelta(days=7))
 
     labels_1 = {**common_labels, "vpn": "active_ravpn_tunnels"}
     labels_2 = {**common_labels, "vpn": "inactive_ravpn_tunnels"}
@@ -80,13 +80,14 @@ def step_impl(context):
 
         # Check for data in Prometheus
         response = get(endpoint, print_body=False)
-        num_data_points_active_ravpn = len(response["data"]["result"][0]["values"])
-        num_data_points_inactive_ravpn = len(response["data"]["result"][1]["values"])
-        print(
-            f"Active RAVPN data points: {num_data_points_active_ravpn}. Inactive RAVPN data points: {num_data_points_inactive_ravpn}")
-        if num_data_points_active_ravpn > 3500 and num_data_points_inactive_ravpn > 3500:
-            success = True
-            break
+        if len(response["data"]["result"]) > 0:
+            num_data_points_active_ravpn = len(response["data"]["result"][0]["values"])
+            num_data_points_inactive_ravpn = len(response["data"]["result"][1]["values"])
+            print(
+                f"Active RAVPN data points: {num_data_points_active_ravpn}. Inactive RAVPN data points: {num_data_points_inactive_ravpn}")
+            if num_data_points_active_ravpn > 3500 and num_data_points_inactive_ravpn > 3500:
+                success = True
+                break
 
         time.sleep(60)
         # TODO: Ingest live data till backfill data is available
