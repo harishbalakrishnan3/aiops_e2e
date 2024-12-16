@@ -14,7 +14,7 @@ poetry install
 2. Download and install promtool and mimirtool by running the shell scripts located in the `utils` directory.
 ```bash
 cd utils
-sh ./download_promtool.sh
+sh ./download_prometheus.sh
 sh ./download_mimirtool.sh
 ```
 

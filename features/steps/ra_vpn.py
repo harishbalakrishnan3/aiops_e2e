@@ -14,6 +14,7 @@ from mockseries.utils import datetime_range
 
 from features.steps.cdo_apis import get, post
 from features.steps.env import get_endpoints, Path
+from features.steps.utils import get_common_labels
 
 t = Template("""# HELP $metric_name $description
 # TYPE $metric_name gauge
@@ -28,19 +29,14 @@ def step_impl(context):
         print("Remote write config not found. Skipping backfill.")
         assert False
 
-    if context.tenant_id is None:
-        print("Tenant ID not found. Skipping backfill.")
-        assert False
-
     ts_values, time_points = generate_timeseries()
 
     metric_name = "vpn"
     common_labels = {
-        "instance": "127.0.0.2:9273",
-        "job": "metrics_generator:8123",
-        "uuid": context.device_id,
-        "tenant_uuid": context.tenant_id
-    }
+                        "instance": "127.0.0.2:9273",
+                        "job": "metrics_generator:8123",
+                    } | get_common_labels(context, timedelta(days=7))
+
     labels_1 = {**common_labels, "vpn": "active_ravpn_tunnels"}
     labels_2 = {**common_labels, "vpn": "inactive_ravpn_tunnels"}
     description = "Currently active and inactive RAVPN tunnels"
@@ -68,7 +64,7 @@ def step_impl(context):
     start_time_epoch = int(start_time.timestamp())
     end_time_epoch = int(end_time.timestamp())
 
-    query = f"?query=vpn{{uuid=\"{context.device_id}\"}}&start={start_time_epoch}&end={end_time_epoch}&step=5m"
+    query = f"?query=vpn{{uuid=\"{context.scenario_to_device_map[context.scenario].device_record_uid}\"}}&start={start_time_epoch}&end={end_time_epoch}&step=5m"
 
     endpoint = get_endpoints().PROMETHEUS_RANGE_QUERY_URL + query
 
@@ -84,13 +80,14 @@ def step_impl(context):
 
         # Check for data in Prometheus
         response = get(endpoint, print_body=False)
-        num_data_points_active_ravpn = len(response["data"]["result"][0]["values"])
-        num_data_points_inactive_ravpn = len(response["data"]["result"][1]["values"])
-        print(
-            f"Active RAVPN data points: {num_data_points_active_ravpn}. Inactive RAVPN data points: {num_data_points_inactive_ravpn}")
-        if num_data_points_active_ravpn > 3500 and num_data_points_inactive_ravpn > 3500:
-            success = True
-            break
+        if len(response["data"]["result"]) > 0:
+            num_data_points_active_ravpn = len(response["data"]["result"][0]["values"])
+            num_data_points_inactive_ravpn = len(response["data"]["result"][1]["values"])
+            print(
+                f"Active RAVPN data points: {num_data_points_active_ravpn}. Inactive RAVPN data points: {num_data_points_inactive_ravpn}")
+            if num_data_points_active_ravpn > 3500 and num_data_points_inactive_ravpn > 3500:
+                success = True
+                break
 
         time.sleep(60)
         # TODO: Ingest live data till backfill data is available
@@ -117,7 +114,7 @@ def step_impl(context):
             "processor": []
         },
         "deviceIds": [
-            context.device_id
+            context.scenario_to_device_map[context.scenario]
         ],
         "timestamp": "2024-08-21T05:55:00.000",
         "attributes": {}
