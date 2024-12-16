@@ -85,6 +85,8 @@ def update_device_details(context):
 
 def is_ra_vpn_enabled(ra_vpn_enabled_devices , device_record_uid):
     for item in ra_vpn_enabled_devices:
+        if "device" not in item:
+            return False
         device_id = item['device']['id']
 
         if device_record_uid == device_id:
