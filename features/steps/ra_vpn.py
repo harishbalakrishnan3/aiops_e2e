@@ -85,7 +85,7 @@ def step_impl(context):
             num_data_points_inactive_ravpn = len(response["data"]["result"][1]["values"])
             print(
                 f"Active RAVPN data points: {num_data_points_active_ravpn}. Inactive RAVPN data points: {num_data_points_inactive_ravpn}")
-            if num_data_points_active_ravpn > 3500 and num_data_points_inactive_ravpn > 3500:
+            if num_data_points_active_ravpn > 3700 and num_data_points_inactive_ravpn > 3700:
                 success = True
                 break
 
