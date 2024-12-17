@@ -114,7 +114,7 @@ def step_impl(context):
             "processor": []
         },
         "deviceIds": [
-            context.scenario_to_device_map[context.scenario]
+            context.scenario_to_device_map[context.scenario].device_record_uid
         ],
         "timestamp": "2024-08-21T05:55:00.000",
         "attributes": {}
