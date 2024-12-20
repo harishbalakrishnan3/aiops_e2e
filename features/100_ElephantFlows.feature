@@ -1,7 +1,6 @@
 Feature: Elephant flows
   Background: 
     Given the tenant onboard state is ONBOARDED
-    And the insights are cleared
 
     Scenario: Test Elephant Flow alerts with enhanced data(7.7 device)
       Then push timeseries for 7 minute(s) of which send last 2 minute(s) of timeseries in live mode
