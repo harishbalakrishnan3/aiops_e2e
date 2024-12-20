@@ -40,12 +40,15 @@ def verify_insight_type_and_state(context, insight_type, state):
     insights = get_insights()
     if insights['count'] == 0:
         return False
-    for insights in insights['items']:
-        if insights['type'] == insight_type and insights['state'] == state and insights['primaryImpactedResources'][
-            0]['uid'] == context.scenario_to_device_map[context.scenario].aegis_device_uid and insights['primaryImpactedResources'][0][
+    for insight in insights['items']:
+        if insight['type'] == insight_type:
+            # first find the insight object that has correct type and verify state and content of insight , This way we only print error log when the state or content fails 
+            if insight['state'] == state and insight['primaryImpactedResources'][
+            0]['uid'] == context.scenario_to_device_map[context.scenario].aegis_device_uid and insight['primaryImpactedResources'][0][
             'name'] == context.scenario_to_device_map[context.scenario].device_name:
-            print(f"One or more checks failed for the insight \n. Expected insight type: {insight_type} \n. Expected insight state: {state} \n. Expected device name: {context.scenario_to_device_map[context.scenario].device_name} \n. Expected device id: {context.scenario_to_device_map[context.scenario].aegis_device_uid} \n\n Actual Insight : {insights}")
-            return True
+                return True
+            else:
+                print(f"One or more checks failed for the insight \n. Expected insight type: {insight_type} \n. Expected insight state: {state} \n. Expected device name: {context.scenario_to_device_map[context.scenario].device_name} \n. Expected device id: {context.scenario_to_device_map[context.scenario].aegis_device_uid} \n\n Actual Insight : {insights}")
     return False
 
 
