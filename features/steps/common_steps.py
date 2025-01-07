@@ -3,7 +3,7 @@ import time
 from behave import *
 from hamcrest import assert_that
 from features.steps.metrics import batch_remote_write
-from features.steps.cdo_apis import delete_insights, verify_insight_type_and_state
+from features.steps.cdo_apis import delete_insights, verify_insight_type_and_state , get_insights
 from datetime import timedelta
 from features.steps.metrics import instant_remote_write
 from features.steps.utils import generate_synthesized_ts_obj, split_data_for_batch_and_live_ingestion
@@ -23,6 +23,16 @@ def step_impl(context, insight_type, insight_state):
 def step_impl(context, insight_type, insight_state, timeout):
     for i in range(int(timeout)):
         if verify_insight_type_and_state(context, insight_type, insight_state):
+            assert_that(True)
+            return
+        time.sleep(60)
+    assert_that(False)
+
+@step('verify no insight is present with a timeout of {timeout} minute(s)')
+def step_impl(context, timeout):
+    for i in range(int(timeout)):
+        insights = get_insights()
+        if insights['count'] == 0:
             assert_that(True)
             return
         time.sleep(60)

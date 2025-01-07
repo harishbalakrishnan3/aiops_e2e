@@ -44,9 +44,6 @@ def before_all(context):
     # Get the remote write config for GCM
     context.remote_write_config = get_gcm_remote_write_config()
 
-    # delete older insights if present
-    delete_insights()
-
 def update_device_details(context):
     # Get cdFMC UID
     resp = get(get_endpoints().FMC_DETAILS_URL, print_body=False)
