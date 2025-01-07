@@ -11,3 +11,7 @@ Feature: Onboard and Offboard testing
     Given the tenant onboard state is NOT_ONBOARDED
     When perform a tenant onboard
     Then verify if the onboard status changes to ONBOARDED with a timeout of 5 minute(s)
+
+  Scenario: No Insights Present
+    Given the insights are cleared
+    Then verify no insight is present with a timeout of 2 minute(s)
