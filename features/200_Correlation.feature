@@ -1,7 +1,6 @@
 Feature: Correlation testing
   Background: 
     Given the tenant onboard state is ONBOARDED
-    And the insights are cleared
   # This feature tests if the desired alerts are raised for various correlation scenarios
   # Firing Test scenarios
   Scenario: Push data and test correlation alerts for CPU_LINA_THRESHOLD_BREACH

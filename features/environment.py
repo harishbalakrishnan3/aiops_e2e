@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 from features.steps.cdo_apis import get, post
 from features.steps.env import get_endpoints
 from features.model import Device , ScenarioEnum
-from features.steps.cdo_apis import delete_insights
 
 timeseries = {}
 
