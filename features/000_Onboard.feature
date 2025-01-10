@@ -12,3 +12,7 @@ Feature: Onboard and Offboard testing
     When perform a tenant onboard
     Then verify if the onboard status changes to ONBOARDED with a timeout of 5 minute(s)
     Then verify status action is not in TENANT_OPTIN_PARTIAL_SUCCESS state
+
+  Scenario: No Insights Present
+    Given the insights are cleared
+    Then verify no insight is present with a timeout of 2 minute(s)

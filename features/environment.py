@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 from features.steps.cdo_apis import get, post
 from features.steps.env import get_endpoints
 from features.model import Device , ScenarioEnum
-from features.steps.cdo_apis import delete_insights
 
 timeseries = {}
 
@@ -43,9 +42,6 @@ def before_all(context):
 
     # Get the remote write config for GCM
     context.remote_write_config = get_gcm_remote_write_config()
-
-    # delete older insights if present
-    delete_insights()
 
 def update_device_details(context):
     # Get cdFMC UID
