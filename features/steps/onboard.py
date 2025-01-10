@@ -31,3 +31,9 @@ def step_impl(context, state, timeout):
             continue
         else:
             return
+
+@step('verify status action is not in {action_state} state')
+def step_impl(context, action_state):
+    response = get_onboard_status()
+    if("status" in response):
+        assert_that(response["status"]["action"] != action_state)
