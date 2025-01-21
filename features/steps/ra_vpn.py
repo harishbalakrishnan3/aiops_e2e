@@ -134,7 +134,7 @@ def generate_timeseries():
          })
 
     # Noise component
-    noise = GaussianNoise(mean=0, std=3)
+    noise = GaussianNoise(mean=0, std=3 , random_seed=42)
 
     # Combine components
     timeseries = trend + seasonality + noise
