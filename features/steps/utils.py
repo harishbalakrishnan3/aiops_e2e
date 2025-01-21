@@ -129,7 +129,7 @@ def generate_synthesized_ts_obj(context, metric_name: str, label_string: str, st
         transition=linear_transition
     )
 
-    noise = RedNoise(mean=0, std=2, correlation=0.5)
+    noise = RedNoise(mean=0, std=2, correlation=0.5 , random_seed=42)
 
     time_series = speed_switch + noise
 
