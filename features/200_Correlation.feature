@@ -14,6 +14,11 @@ Feature: Correlation testing
       | interface              | description=drop_packets                  | 12          | 90        | 1                  | 55                     |
       | deployed_configuration | deployed_configuration=number_of_ACEs     | 12          | 90        | 1                  | 55                     |
     Then verify if an CPU_LINA_THRESHOLD_BREACH insight with state ACTIVE is created with a timeout of 10 minute(s)
+    Then confirm correlated metrics
+      | metric_name                 | confidence        | 
+      | Control plane CPU           | HIGH              | 
+      | Connections                 | HIGH              | 
+      | Deployed ACE Configurations | HIGH              | 
     Then push timeseries for 2 minute(s) of which send last 2 minute(s) of timeseries in live mode
       | metric_name | label_values    | start_value | end_value | start_spike_minute | spike_duration_minutes |
       | cpu         | cpu=lina_dp_avg | 60          | 60        | 0                  | 1                      |
@@ -32,6 +37,12 @@ Feature: Correlation testing
       | snort3_perfstats       | snort3_perfstats="concurrent_elephant_flows"     | 12          | 90        | 1                  | 55                     |
       | asp_drops              | asp_drops="snort-busy-not-fp"                    | 12          | 90        | 1                  | 55                     |
     Then verify if an CPU_SNORT_THRESHOLD_BREACH insight with state ACTIVE is created with a timeout of 10 minute(s)
+    Then confirm correlated metrics
+      | metric_name                 | confidence        | 
+      | Input Packet Size           | HIGH              | 
+      | Snort Denied Flows          | HIGH              | 
+      | Connections                 | HIGH              |
+      | Control plane CPU           | HIGH              |
     Then push timeseries for 2 minute(s) of which send last 2 minute(s) of timeseries in live mode
       | metric_name | label_values  | start_value | end_value | start_spike_minute | spike_duration_minutes |
       | cpu         | cpu=snort_avg | 60          | 60        | 0                  | 1                      |
@@ -46,6 +57,10 @@ Feature: Correlation testing
       | interface              | description=input_packets, interface=all  | 12          | 90        | 1                  | 55                     |
       | deployed_configuration | deployed_configuration=number_of_ACEs     | 12          | 90        | 1                  | 55                     |
     Then verify if an MEMORY_LINA_THRESHOLD_BREACH insight with state ACTIVE is created with a timeout of 10 minute(s)
+    Then confirm correlated metrics
+      | metric_name                 | confidence        | 
+      | Connections                 | HIGH              | 
+      | Deployed ACE Configurations | HIGH             | 
     Then push timeseries for 2 minute(s) of which send last 2 minute(s) of timeseries in live mode
       | metric_name | label_values             | start_value | end_value | start_spike_minute | spike_duration_minutes |
       | mem         | mem=used_percentage_lina | 60          | 60        | 0                  | 1                      |
@@ -58,6 +73,9 @@ Feature: Correlation testing
       | conn_stats  | conn_stats=connection, description=in_use | 12          | 90        | 1                  | 55                     |
       | interface   | description=input_bytes , interface=all   | 12          | 12        | 1                  | 55                     |
       | interface   | description=input_packets, interface=all  | 12          | 90        | 1                  | 55                     |
+    Then confirm correlated metrics
+      | metric_name                 | confidence        | 
+      | Connections                 | HIGH              | 
     Then verify if an MEMORY_SNORT_THRESHOLD_BREACH insight with state ACTIVE is created with a timeout of 10 minute(s)
     Then push timeseries for 2 minute(s) of which send last 2 minute(s) of timeseries in live mode
       | metric_name | label_values              | start_value | end_value | start_spike_minute | spike_duration_minutes |
