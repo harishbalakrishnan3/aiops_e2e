@@ -46,6 +46,7 @@ def verify_insight_type_and_state(context, insight_type, state):
             if insight['state'] == state and insight['primaryImpactedResources'][
             0]['uid'] == context.scenario_to_device_map[context.scenario].aegis_device_uid and insight['primaryImpactedResources'][0][
             'name'] == context.scenario_to_device_map[context.scenario].device_name:
+                context.matched_insight = insight
                 return True
             else:
                 print(f"One or more checks failed for the insight \n. Expected insight type: {insight_type} \n. Expected insight state: {state} \n. Expected device name: {context.scenario_to_device_map[context.scenario].device_name} \n. Expected device id: {context.scenario_to_device_map[context.scenario].aegis_device_uid} \n\n Actual Insight : {insights}")
