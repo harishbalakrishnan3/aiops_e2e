@@ -73,10 +73,10 @@ Feature: Correlation testing
       | conn_stats  | conn_stats=connection, description=in_use | 12          | 90        | 1                  | 55                     |
       | interface   | description=input_bytes , interface=all   | 12          | 12        | 1                  | 55                     |
       | interface   | description=input_packets, interface=all  | 12          | 90        | 1                  | 55                     |
+    Then verify if an MEMORY_SNORT_THRESHOLD_BREACH insight with state ACTIVE is created with a timeout of 10 minute(s)
     Then confirm correlated metrics
       | metric_name                 | confidence        | 
       | Connections                 | HIGH              | 
-    Then verify if an MEMORY_SNORT_THRESHOLD_BREACH insight with state ACTIVE is created with a timeout of 10 minute(s)
     Then push timeseries for 2 minute(s) of which send last 2 minute(s) of timeseries in live mode
       | metric_name | label_values              | start_value | end_value | start_spike_minute | spike_duration_minutes |
       | mem         | mem=used_percentage_snort | 60          | 60        | 0                  | 1                      |

@@ -11,10 +11,9 @@ from mockseries.noise import GaussianNoise
 from mockseries.seasonality import DailySeasonality
 from mockseries.trend import LinearTrend
 from mockseries.utils import datetime_range
-
 from features.steps.cdo_apis import get, post
 from features.steps.env import get_endpoints, Path
-from features.steps.utils import get_common_labels
+from features.steps.utils import get_common_labels , is_data_not_present
 
 t = Template("""# HELP $metric_name $description
 # TYPE $metric_name gauge
@@ -29,6 +28,10 @@ def step_impl(context):
         print("Remote write config not found. Skipping backfill.")
         assert False
 
+    if is_device_present_with_ra_vpn_data(context):
+        assert True 
+        return
+        
     ts_values, time_points = generate_timeseries()
 
     metric_name = "vpn"
@@ -120,6 +123,16 @@ def step_impl(context):
         "attributes": {}
     }
     post(get_endpoints().TRIGGER_MANAGER_URL, json.dumps(payload))
+
+def is_device_present_with_ra_vpn_data(context):
+    available_devices = [device for device in  context.devices if device.ra_vpn_enabled == True]
+    query = "query=vpn{{uuid=\"{uuid}\"}}"
+    for device in available_devices:
+        if not is_data_not_present(query.format(uuid=device.device_record_uid) , timedelta(days=365) , "60m"):
+            context.scenario_to_device_map[context.scenario] = device
+            print("Device with RA-VPN data already present , Selected device: ", device)
+            return True
+    return False
 
 
 def generate_timeseries():
