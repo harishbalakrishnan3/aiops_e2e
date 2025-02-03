@@ -105,16 +105,6 @@ def is_data_not_present(query:str , duration:timedelta , step="5m"):
 
     return True
 
-
-def generate_ts(trend_config, seasonality_config, noise_config, time_points):
-    trend = LinearTrend(coefficient=trend_config['coefficient'], time_unit=timedelta(hours=trend_config['time_unit']),
-                        flat_base=trend_config['flat_base'])
-    seasonality = DailySeasonality(seasonality_config)
-    noise = GaussianNoise(mean=noise_config['mean'], std=noise_config['std'])
-    timeseries = trend + seasonality + noise
-    ts_values = timeseries.generate(time_points=time_points)
-    return ts_values
-
 def generate_synthesized_ts_obj(context, metric_name: str, label_string: str, start_value: float, end_value: float,
                                 spike_duration_minutes: int, start_spike_minute: int, duration: int):
     linear_transition = LinearTransition(
