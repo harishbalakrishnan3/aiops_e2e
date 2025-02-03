@@ -8,60 +8,67 @@ from mockseries.seasonality.seasonality import Seasonality
 from mockseries.seasonality.sinusoidal_seasonality import SinusoidalSeasonality
 from mockseries.utils import datetime_range
 from mockseries.noise.noise import Noise
-from typing import Optional
+from typing import List , Optional
 
 from pydantic import BaseModel
 
+class TimeConfig(BaseModel,arbitrary_types_allowed=True):
+    start_value : float
+    end_value : float
+    transition_start : timedelta
+    transition:Optional[LambdaTransition]=None
+    duration : timedelta
+    step:timedelta = timedelta(minutes=1)
+
 class NoiseConfig(BaseModel,arbitrary_types_allowed=True):
     enable: bool
-    noise: Optional[Noise] = None
+    noise_list: List[Noise] = []
 
 class SeasonalityConfig(BaseModel, arbitrary_types_allowed=True):
     enable: bool
-    seasonality:Optional[Seasonality] = None
+    seasonality_list: List[Seasonality] = []
 
-default_noise = NoiseConfig(enable=True, noise=RedNoise(mean=0, std=2, correlation=0.5 , random_seed=42))
-default_seasonality = SeasonalityConfig(enable=True, seasonality=SinusoidalSeasonality(amplitude=3, period=timedelta(hours=6)))
+default_noise = NoiseConfig(enable=True, noise_list=[RedNoise(mean=0, std=2, correlation=0.5 , random_seed=42)])
+default_seasonality = SeasonalityConfig(enable=True, seasonality_list=[SinusoidalSeasonality(amplitude=3, period=timedelta(hours=6))])
 
 
-def convert_to_dataframe(ts_values ,current_time:datetime , step:timedelta )-> pd.DataFrame:
-    current_time = current_time.timestamp() * 1000
+def convert_to_dataframe(ts_values , time_points:List[datetime] )-> pd.DataFrame:
     metrics = pd.DataFrame(columns=["ds", "y"])
-    for i, value in enumerate(ts_values):
-        timestamp = int(current_time - len(ts_values) * step.total_seconds() * 1e9 + i * step.total_seconds() * 1e9)
-        metrics.loc[i] = [timestamp, value]
+    for i, value in enumerate(time_points):
+        metrics.loc[i] = [value.timestamp() , ts_values[i]]
 
     return metrics
 
-def generate_timeseries(start_value: float, end_value: float, transition_start: timedelta, duration: timedelta ,noise_config:NoiseConfig=default_noise ,step:timedelta=timedelta(minutes=1),transition:LambdaTransition=None ,  seasonality_config:SeasonalityConfig=default_seasonality ):
+def generate_timeseries(time_config : TimeConfig ,noise_config:NoiseConfig=default_noise ,  seasonality_config:SeasonalityConfig=default_seasonality ):
     now = datetime.now()
     switch = None    
-    if transition is None:
+    if time_config.transition is None:
         switch = Switch(
-                    start_time=now + transition_start,
-                    base_value=start_value, 
-                    switch_value=end_value,
+                    start_time=now - time_config.duration + time_config.transition_start,
+                    base_value=time_config.start_value, 
+                    switch_value=time_config.end_value,
                 )
     else:
         switch = Switch(
-            start_time=now + transition_start,
-            base_value=start_value,
-            switch_value=end_value,
-            transition=transition
+            start_time=now - time_config.duration + time_config.transition_start,
+            base_value=time_config.start_value,
+            switch_value=time_config.end_value,
+            transition=time_config.transition
         )
     time_series = switch
 
     if seasonality_config.enable:
-        time_series = time_series + seasonality_config.seasonality
+        for seasonality in seasonality_config.seasonality_list:
+            time_series = time_series + seasonality
 
     if noise_config.enable:
-        time_series = time_series + noise_config.noise
+        for noise in noise_config.noise_list:
+            time_series = time_series + noise
 
     time_points = datetime_range(
-        granularity=timedelta(minutes=1),
-        start_time=now ,
-        end_time=now + duration)
+        granularity=time_config.step,
+        start_time= now - time_config.duration ,
+        end_time=now)
         
     ts_values = time_series.generate(time_points=time_points)
-
-    return convert_to_dataframe(ts_values, now, step)
+    return convert_to_dataframe(ts_values, time_points)
