@@ -34,6 +34,9 @@ t = Template(
 {% endfor %}
 """)
 
+# TODO : make this dynamic
+HISTORICAL_DATA_FILE = "anomaly_historical_data.txt"
+
 def get_index_of_metric_object(backfill_data_list:List[BackfillData] ,generated_data:GeneratedData):
     for i , backfill_data in enumerate(backfill_data_list):
         if backfill_data.metric_name == generated_data.metric_name:
@@ -142,7 +145,7 @@ def step_impl(context , duration):
     # each unique label tuple should have seprate entry in block
     backfill_data_list = convert_to_backfill_data(generated_data_list)
     file_text =""
-    with open(os.path.join(Path.PYTHON_UTILS_ROOT, "historical_data.txt"), 'w') as file:
+    with open(os.path.join(Path.PYTHON_UTILS_ROOT, HISTORICAL_DATA_FILE), 'w') as file:
         for i in range(len(backfill_data_list[0].series[0].value)):
             multiline_text = t.render(backfill_data_list=backfill_data_list , index=i)
             file_text += multiline_text
@@ -159,7 +162,7 @@ def step_impl(context , duration):
     remote_write_config = context.remote_write_config
     subprocess.run([os.path.join(Path.PYTHON_UTILS_ROOT, "backfill.sh"),
                     remote_write_config["url"].removesuffix("/api/prom/push"),
-                    remote_write_config["username"], remote_write_config["password"], Path.PYTHON_UTILS_ROOT])
+                    remote_write_config["username"], remote_write_config["password"], Path.PYTHON_UTILS_ROOT , "/anomaly_data/" , HISTORICAL_DATA_FILE],)
     
     assert check_if_data_present(context , generated_data_list[0].metric_name , duration_delta)
 

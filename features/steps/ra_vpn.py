@@ -21,6 +21,8 @@ $metric_name{$labels_1} $value $timestamp
 $metric_name{$labels_2} $value $timestamp
 """)
 
+# TODO : Make this dynamic
+HISTORICAL_DATA_FILE = "ravpn_historical_data.txt"
 
 @step('backfill RAVPN metrics for a suitable device')
 def step_impl(context):
@@ -28,9 +30,10 @@ def step_impl(context):
         print("Remote write config not found. Skipping backfill.")
         assert False
 
-    if is_device_present_with_ra_vpn_data(context):
-        assert True 
-        return
+    # TODO : Remove post checking backfill behaviour for RA-VPN
+    # if is_device_present_with_ra_vpn_data(context):
+    #     assert True 
+    #     return
         
     ts_values, time_points = generate_timeseries()
 
@@ -45,7 +48,7 @@ def step_impl(context):
     description = "Currently active and inactive RAVPN tunnels"
     labels_1 = ",".join([f"{k}=\"{v}\"" for k, v in labels_1.items()])
     labels_2 = ",".join([f"{k}=\"{v}\"" for k, v in labels_2.items()])
-    with open(os.path.join(Path.PYTHON_UTILS_ROOT, "historical_data.txt"), 'w') as file:
+    with open(os.path.join(Path.PYTHON_UTILS_ROOT, HISTORICAL_DATA_FILE), 'w') as file:
         for i in range(len(time_points)):
             multiline_text = t.substitute(value=ts_values[i], timestamp=int(time_points[i].timestamp()),
                                           metric_name=metric_name, labels_1=labels_1, labels_2=labels_2,
@@ -57,7 +60,7 @@ def step_impl(context):
 
     subprocess.run([os.path.join(Path.PYTHON_UTILS_ROOT, "backfill.sh"),
                     remote_write_config["url"].removesuffix("/api/prom/push"),
-                    remote_write_config["username"], remote_write_config["password"], Path.PYTHON_UTILS_ROOT])
+                    remote_write_config["username"], remote_write_config["password"], Path.PYTHON_UTILS_ROOT , "/ravpn_data/" , HISTORICAL_DATA_FILE] ,)
 
     # Calculate the start and end times
     start_time = datetime.now() - timedelta(days=14)
