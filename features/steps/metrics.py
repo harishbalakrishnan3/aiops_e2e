@@ -4,7 +4,7 @@ from datetime import timedelta
 from behave import *
 from opentelemetry import metrics
 from cdo_apis import remote_write
-from features.steps.utils import get_label_map , convert_str_list_to_dict
+from features.steps.utils import GeneratedData, get_label_map , convert_str_list_to_dict
 from opentelemetry.sdk.metrics._internal.point import ResourceMetrics , ScopeMetrics,Metric,Gauge, NumberDataPoint
 from opentelemetry.sdk.util.instrumentation import InstrumentationScope
 from opentelemetry.sdk.metrics.export import MetricsData
@@ -33,18 +33,17 @@ def create_gauge(name: str, description: str):
 active_metrics = {}
 
 
-def batch_remote_write(synthesized_ts: Dict[str, Any], step: timedelta):
-    values = synthesized_ts["values"]
-    labels = synthesized_ts["labels"]
+def batch_remote_write(synthesized_ts: GeneratedData, step: timedelta):
+    values = synthesized_ts.values
+    labels = synthesized_ts.labels
 
     data_points = []
-    current_time = time.time_ns()
-    for i, value in enumerate(values):
-        timestamp = int(current_time - len(values) * step.total_seconds() * 1e9 + i * step.total_seconds() * 1e9)
+    for i , value in values.iterrows():
+        timestamp = int(value["ds"] * 1e9)
         data_points.append(NumberDataPoint(
             time_unix_nano=timestamp,
             start_time_unix_nano=timestamp,
-            value=value,
+            value=value["y"],
             attributes=labels,
         ))
 
@@ -56,7 +55,7 @@ def batch_remote_write(synthesized_ts: Dict[str, Any], step: timedelta):
                 scope=InstrumentationScope(name="sample_scope"),
                 metrics=[
                     Metric(
-                        name=synthesized_ts["metric_name"],
+                        name=synthesized_ts.metric_name,
                         description="",
                         data=Gauge(data_points=data_points),
                         unit="",
