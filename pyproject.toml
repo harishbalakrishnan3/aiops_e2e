@@ -26,6 +26,7 @@ regex = "^2024.9.11"
 python-dateutil = "^2.9.0.post0"
 pyjwt = "^2.9.0"
 urllib3 = "^2.2.3"
+pandas = "^2.2.2"
 
 
 [build-system]

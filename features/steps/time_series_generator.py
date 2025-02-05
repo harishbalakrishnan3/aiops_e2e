@@ -18,6 +18,7 @@ class TimeConfig(BaseModel,arbitrary_types_allowed=True):
     transition_start : timedelta
     transition:Optional[LambdaTransition]=None
     duration : timedelta
+    time_offset: timedelta = timedelta(minutes=0)
     step:timedelta = timedelta(minutes=1)
 
 class NoiseConfig(BaseModel,arbitrary_types_allowed=True):
@@ -39,8 +40,8 @@ def convert_to_dataframe(ts_values , time_points:List[datetime] )-> pd.DataFrame
 
     return metrics
 
-def generate_timeseries(time_config : TimeConfig ,noise_config:NoiseConfig=default_noise ,  seasonality_config:SeasonalityConfig=default_seasonality ):
-    now = datetime.now()
+def generate_timeseries(time_config : TimeConfig ,noise_config:NoiseConfig=default_noise ,  seasonality_config:SeasonalityConfig=default_seasonality ) -> pd.DataFrame:
+    now = datetime.now() + time_config.time_offset
     switch = None    
     if time_config.transition is None:
         switch = Switch(

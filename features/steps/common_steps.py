@@ -70,6 +70,7 @@ def step_impl(context, duration, live_duration):
                                                          end_value=end_value,
                                                          start_spike_minute=start_spike_minute,
                                                          spike_duration_minutes=spike_duration_minutes,
+                                                         time_offset=timedelta(minutes=live_duration),
                                                          duration=duration)
         synthesized_ts_list.append(synthesized_ts_obj)
 
@@ -80,15 +81,15 @@ def step_impl(context, duration, live_duration):
         batch_remote_write(synthesized_data, timedelta(minutes=1))
 
     # Live data generation
-    live_ingest_datapoints_count = len(synthesized_ts_list_for_live_fill[0]["values"])
+    live_ingest_datapoints_count = len(synthesized_ts_list_for_live_fill[0].values)
     print(f"Pushing {live_ingest_datapoints_count} datapoints through live ingestion ")
     for i in range(live_ingest_datapoints_count):
         data_for_current_instant = []
         for value_dict in synthesized_ts_list_for_live_fill:
             data_for_current_instant.append({
-                "metric_name": value_dict["metric_name"],
-                "value": value_dict["values"][i],
-                "labels": value_dict["labels"]
+                "metric_name": value_dict.metric_name,
+                "value": value_dict.values.iloc[i]["y"],
+                "labels": value_dict.labels
             })
 
         for data in data_for_current_instant:

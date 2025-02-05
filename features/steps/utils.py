@@ -1,16 +1,19 @@
 import copy
 from datetime import timedelta , datetime
-from typing import Any
-
-from mockseries.noise import GaussianNoise ,RedNoise
-from mockseries.seasonality import DailySeasonality
-from mockseries.trend import LinearTrend , Switch
+from typing import List
+import pandas as pd
 from mockseries.transition import LinearTransition
-from mockseries.utils import datetime_range
+from pydantic import BaseModel
 from features.model import ScenarioEnum , Device
 from features.steps.env import get_endpoints
 from features.steps.cdo_apis import get
+from time_series_generator import generate_timeseries , TimeConfig , SeasonalityConfig
 
+
+class GeneratedData(BaseModel ,arbitrary_types_allowed=True):
+    metric_name: str
+    values: pd.DataFrame
+    labels: dict
 
 def store_ts_in_context(context, labels, key, metric_name):
     ts = copy.deepcopy(labels)
@@ -75,6 +78,9 @@ def get_appropriate_device(context , duration) -> Device:
         case ScenarioEnum.RAVPN_FORECAST:
             available_devices = [device for device in  context.devices if device.ra_vpn_enabled == True]
             query = "query=vpn{{uuid=\"{uuid}\"}}"
+        case ScenarioEnum.ANOMALY:
+            available_devices = [device for device in  context.devices if device.ra_vpn_enabled == True]
+            query = "query=conn_stats{{uuid=\"{uuid}\"}}"
         case _:
             print("No matching scenarios found , picking up the last available device")
             return context.devices[-1]
@@ -106,51 +112,37 @@ def is_data_not_present(query:str , duration:timedelta , step="5m"):
     return True
 
 def generate_synthesized_ts_obj(context, metric_name: str, label_string: str, start_value: float, end_value: float,
-                                spike_duration_minutes: int, start_spike_minute: int, duration: int):
-    linear_transition = LinearTransition(
-        transition_window=timedelta(minutes=spike_duration_minutes),
+                                spike_duration_minutes: int, start_spike_minute: int, duration: int , time_offset:timedelta) -> GeneratedData:
+    generated_data = generate_timeseries(TimeConfig(start_value=start_value ,
+                                                     end_value=end_value , 
+                                                     transition_start=timedelta(minutes=start_spike_minute) , 
+                                                     transition=LinearTransition(transition_window=timedelta(minutes=spike_duration_minutes)),
+                                                     duration=timedelta(minutes=duration),
+                                                     time_offset=time_offset,   
+                                                    ), seasonality_config=SeasonalityConfig(enable=False))
+
+
+    return GeneratedData(
+        metric_name =metric_name,
+        values = generated_data,
+        labels = get_label_map(context, label_string , timedelta(minutes=duration))
     )
 
-    now = datetime.now()
-    speed_switch = Switch(
-        start_time=now + timedelta(minutes=start_spike_minute),
-        base_value=start_value,
-        switch_value=end_value,
-        transition=linear_transition
-    )
+def split_data_for_batch_and_live_ingestion(synthesized_ts_list: List[GeneratedData], live_duration: int) -> List[List[GeneratedData]]:
+    data_split_index = len(synthesized_ts_list[0].values) - live_duration
 
-    noise = RedNoise(mean=0, std=2, correlation=0.5 , random_seed=42)
-
-    time_series = speed_switch + noise
-
-    time_points = datetime_range(
-        granularity=timedelta(minutes=1),
-        start_time=now,
-        end_time=now + timedelta(minutes=duration),
-    )
-    ts_values = time_series.generate(time_points=time_points)
-
-    return {
-        "metric_name": metric_name,
-        "values": ts_values,
-        "labels": get_label_map(context, label_string , timedelta(minutes=duration))
-    }
-
-def split_data_for_batch_and_live_ingestion(synthesized_ts_list: [dict[str, Any]], live_duration: int):
-    data_split_index = len(synthesized_ts_list[0]["values"]) - live_duration
-
-    synthesized_ts_list_for_batch_fill = []
-    synthesized_ts_list_for_live_fill = []
+    synthesized_ts_list_for_batch_fill:List[GeneratedData] = []
+    synthesized_ts_list_for_live_fill:List[GeneratedData] = []
     for synthesized_ts in synthesized_ts_list:
         if data_split_index != 0:
-            synthesized_ts_list_for_batch_fill.append({
-                "metric_name": synthesized_ts["metric_name"],
-                "values": synthesized_ts["values"][:data_split_index],
-                "labels": synthesized_ts["labels"]
-            })
-        synthesized_ts_list_for_live_fill.append({
-            "metric_name": synthesized_ts["metric_name"],
-            "values": synthesized_ts["values"][data_split_index:],
-            "labels": synthesized_ts["labels"]
-        })
+            synthesized_ts_list_for_batch_fill.append(GeneratedData(
+                metric_name=  synthesized_ts.metric_name,
+                values = synthesized_ts.values[:data_split_index],
+                labels = synthesized_ts.labels,
+            ))
+        synthesized_ts_list_for_live_fill.append(GeneratedData(
+            metric_name=  synthesized_ts.metric_name,
+            values = synthesized_ts.values[data_split_index:],
+            labels = synthesized_ts.labels,
+        ))
     return [synthesized_ts_list_for_batch_fill, synthesized_ts_list_for_live_fill]
