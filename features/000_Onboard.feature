@@ -1,6 +1,6 @@
 Feature: Onboard and Offboard testing
   # This feature tests onboard and offboard scenarios
-  #test changes
+
   Scenario: Test offboard
     Given the tenant onboard state is ONBOARDED
     When perform a tenant offboard
