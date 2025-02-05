@@ -3,15 +3,15 @@ import time
 from behave import *
 from hamcrest import assert_that
 
-from features.steps.cdo_apis import post_onboard_action, get_onboard_status
+from features.steps.cdo_apis import post_onboard_action, post_offboard_action, get_onboard_status
 
 
 @step('perform a tenant {action}')
 def step_impl(context, action):
     if action.upper() == "ONBOARD":
-        post_onboard_action("ONBOARD")
+        post_onboard_action()
     else:
-        post_onboard_action("OFFBOARD")
+        post_offboard_action()
 
 
 @step('the tenant onboard state is {state}')
