@@ -8,6 +8,12 @@ Poetry is used for managing the Python dependencies. To install the dependencies
 poetry install
 ```
 
+# To format the files manually 
+pre-commit run --all-files
+
+# To Automatically run the formatter pre commit run : 
+pre-commit install
+
 ### Pre-requisites for Behave Tests
 
 1. Add your CDO token in `.env` file located at the project root directory.
