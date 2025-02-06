@@ -15,5 +15,5 @@ class ScenarioEnum(str , Enum):
     CORRELATION_MEM_LINA = "Push data and test correlation alerts for MEMORY_LINA_THRESHOLD_BREACH"
     CORRELATION_MEM_SNORT = "Push data and test correlation alerts for MEMORY_SNORT_THRESHOLD_BREACH"
     RAVPN_FORECAST = "Testing RA-VPN forecasting"
-    ANOMALY = "Testing Anomaly Detection"
+    ANOMALY_CONNECTION = "Testing Anomaly Detection for Connection Stats"
     UNKOWN_SCENARIO = "Unkown scneario"

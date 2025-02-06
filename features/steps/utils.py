@@ -1,5 +1,6 @@
 import copy
 from datetime import timedelta , datetime
+import time
 from typing import List
 import pandas as pd
 from mockseries.transition import LinearTransition
@@ -9,11 +10,24 @@ from features.steps.env import get_endpoints
 from features.steps.cdo_apis import get
 from time_series_generator import generate_timeseries , TimeConfig , SeasonalityConfig
 
-
 class GeneratedData(BaseModel ,arbitrary_types_allowed=True):
     metric_name: str
     values: pd.DataFrame
     labels: dict
+
+class Series(BaseModel ,arbitrary_types_allowed=True):
+    labels: str
+    value: List[float]
+    timestamp: List[int]
+
+class BackfillData(BaseModel ,arbitrary_types_allowed=True):
+    metric_name: str
+    series:List[Series]
+    description : str = "Test Backfill Data"
+
+
+# TODO : make this dynamic
+HISTORICAL_DATA_FILE = "anomaly_historical_data.txt"
 
 def store_ts_in_context(context, labels, key, metric_name):
     ts = copy.deepcopy(labels)
@@ -78,7 +92,7 @@ def get_appropriate_device(context , duration) -> Device:
         case ScenarioEnum.RAVPN_FORECAST:
             available_devices = [device for device in  context.devices if device.ra_vpn_enabled == True]
             query = "query=vpn{{uuid=\"{uuid}\"}}"
-        case ScenarioEnum.ANOMALY:
+        case ScenarioEnum.ANOMALY_CONNECTION:
             available_devices = [device for device in  context.devices if device.ra_vpn_enabled == True]
             query = "query=conn_stats{{uuid=\"{uuid}\"}}"
         case _:
@@ -146,3 +160,75 @@ def split_data_for_batch_and_live_ingestion(synthesized_ts_list: List[GeneratedD
             labels = synthesized_ts.labels,
         ))
     return [synthesized_ts_list_for_batch_fill, synthesized_ts_list_for_live_fill]
+
+
+
+def check_if_data_present(context , metric_name:str ,  duration_delta:timedelta) -> bool:
+    start_time = datetime.now() - duration_delta
+    end_time = datetime.now() 
+
+    # Convert to epoch seconds
+    start_time_epoch = int(start_time.timestamp())
+    end_time_epoch = int(end_time.timestamp())
+
+    query = f"?query={metric_name}{{uuid=\"{context.scenario_to_device_map[context.scenario].device_record_uid}\"}}&start={start_time_epoch}&end={end_time_epoch}&step=5m"
+
+    return start_polling(query=query , retry_count=60 , retry_frequency_seconds=60)
+
+def start_polling(query:str , retry_count:int , retry_frequency_seconds:int)-> bool:
+    endpoint = get_endpoints().PROMETHEUS_RANGE_QUERY_URL + query
+
+    count = 0
+    success = False
+    while True:
+        # Exit after 60 minutes
+        if count > retry_count:
+            print("Data not ingested in Prometheus. Exiting.")
+            break
+
+        count += 1
+
+        # Check for data in Prometheus
+        response = get(endpoint, print_body=False)
+        if len(response["data"]["result"]) > 0:
+            num_data_points = len(response["data"]["result"][0]["values"])
+            print(
+                f"Active data points: {num_data_points}.")
+            if num_data_points > 3700 :
+                success = True
+                break
+
+        time.sleep(retry_frequency_seconds)
+        # TODO: Ingest live data till backfill data is available
+    return success
+
+def get_index_of_metric_object(backfill_data_list:List[BackfillData] ,generated_data:GeneratedData):
+    for i , backfill_data in enumerate(backfill_data_list):
+        if backfill_data.metric_name == generated_data.metric_name:
+            return i
+    # No exisiting object found
+    return -1
+
+def convert_to_backfill_data(generated_data_list:List[GeneratedData])-> List[BackfillData]:
+    backfill_data_list:List[BackfillData] = []
+    for generated_data in generated_data_list:
+        update_index = get_index_of_metric_object(backfill_data_list , generated_data)
+
+        series = Series(
+                labels= ",".join([f"{k}=\"{v}\"" for k, v in generated_data.labels.items()]) , 
+                value=generated_data.values["y"].tolist() , 
+                timestamp=generated_data.values["ds"].astype(int).tolist()
+            )
+
+        if update_index != -1:
+            # update existing block
+            backfill_data_list[update_index].series.append(series)
+        else:
+            # add a new block
+            backfill_data_list.append(BackfillData(
+                metric_name = generated_data.metric_name,
+                series = [series],
+                description = "Test Backfill Data"
+            ))
+    
+    return backfill_data_list
