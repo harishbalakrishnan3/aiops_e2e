@@ -4,8 +4,14 @@ from datetime import timedelta
 from behave import *
 from opentelemetry import metrics
 from cdo_apis import remote_write
-from features.steps.utils import GeneratedData, get_label_map , convert_str_list_to_dict
-from opentelemetry.sdk.metrics._internal.point import ResourceMetrics , ScopeMetrics,Metric,Gauge, NumberDataPoint
+from features.steps.utils import GeneratedData, get_label_map, convert_str_list_to_dict
+from opentelemetry.sdk.metrics._internal.point import (
+    ResourceMetrics,
+    ScopeMetrics,
+    Metric,
+    Gauge,
+    NumberDataPoint,
+)
 from opentelemetry.sdk.util.instrumentation import InstrumentationScope
 from opentelemetry.sdk.metrics.export import MetricsData
 from opentelemetry.sdk.metrics import MeterProvider
@@ -38,14 +44,16 @@ def batch_remote_write(synthesized_ts: GeneratedData, step: timedelta):
     labels = synthesized_ts.labels
 
     data_points = []
-    for i , value in values.iterrows():
+    for i, value in values.iterrows():
         timestamp = int(value["ds"] * 1e9)
-        data_points.append(NumberDataPoint(
-            time_unix_nano=timestamp,
-            start_time_unix_nano=timestamp,
-            value=value["y"],
-            attributes=labels,
-        ))
+        data_points.append(
+            NumberDataPoint(
+                time_unix_nano=timestamp,
+                start_time_unix_nano=timestamp,
+                value=value["y"],
+                attributes=labels,
+            )
+        )
 
     resource_metric = ResourceMetrics(
         resource=Resource.get_empty(),
@@ -63,14 +71,13 @@ def batch_remote_write(synthesized_ts: GeneratedData, step: timedelta):
                 ],
                 schema_url="",
             )
-        ]
+        ],
     )
 
-    metrics_data_now = MetricsData(
-        resource_metrics=[resource_metric]
-    )
+    metrics_data_now = MetricsData(resource_metrics=[resource_metric])
 
     remote_write(metrics_data=metrics_data_now)
+
 
 def instant_remote_write(metric_name: str, labels: dict[str, str], value: float):
     if metric_name not in active_metrics:
@@ -82,31 +89,41 @@ def instant_remote_write(metric_name: str, labels: dict[str, str], value: float)
     try:
         remote_write(metrics_data=metrics_data)
     except Exception:
-        print(f"Failed to export metric {metric_name} with labels {labels} and value {value}")
+        print(
+            f"Failed to export metric {metric_name} with labels {labels} and value {value}"
+        )
         return
-    print(f"Exported metric {metric_name} with labels {labels} and value {value} succesfully")
+    print(
+        f"Exported metric {metric_name} with labels {labels} and value {value} succesfully"
+    )
 
 
-@step('ingest the following metrics for {duration} minutes')
+@step("ingest the following metrics for {duration} minutes")
 def step_impl(context, duration):
     for i in range(int(duration)):
         for row in context.table:
             labels = {}
             increment_params = {}
-            if row['labels'] != '':
-                labels = get_label_map(context , row['labels'])
-            if row['increment_params'] != '':
-                increment_params = convert_str_list_to_dict(row['increment_params'])
-            current_value = calculate_current_value(float(row['start_value']), row['increment_type'],
-                                                    increment_params, i)
-            instant_remote_write(row['metric_name'], labels, current_value)
+            if row["labels"] != "":
+                labels = get_label_map(context, row["labels"])
+            if row["increment_params"] != "":
+                increment_params = convert_str_list_to_dict(row["increment_params"])
+            current_value = calculate_current_value(
+                float(row["start_value"]), row["increment_type"], increment_params, i
+            )
+            instant_remote_write(row["metric_name"], labels, current_value)
         time.sleep(60)
 
-def calculate_current_value(start_value: float, increment_type: str, increment_params: dict[str, str],
-                            current_time: int):
-    if increment_type == 'linear':
-        return start_value + float(increment_params['slope']) * float(current_time)
-    if increment_type == 'none':
+
+def calculate_current_value(
+    start_value: float,
+    increment_type: str,
+    increment_params: dict[str, str],
+    current_time: int,
+):
+    if increment_type == "linear":
+        return start_value + float(increment_params["slope"]) * float(current_time)
+    if increment_type == "none":
         return start_value
 
     raise Exception(f"Unknown increment type {increment_type}")
