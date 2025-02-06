@@ -1,11 +1,8 @@
 .idea
 .env
-utils/historical_data.txt
-utils/ravpn_historical_data.txt
-utils/anomaly_historical_data.txt
-utils/data/*
-utils/anomaly_data/*
-utils/ravpn_data/*
+utils/*_historical_data.txt
+utils/*_historical_data.txt
+utils/*_data/*
 utils/mimirtool
 utils/promtool
 utils/prometheus

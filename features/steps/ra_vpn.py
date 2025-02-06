@@ -41,7 +41,7 @@ def step_impl(context):
     common_labels = {
                         "instance": "127.0.0.2:9273",
                         "job": "metrics_generator:8123",
-                    } | get_common_labels(context, timedelta(days=7))
+                    } | get_common_labels(context, timedelta(days=14))
 
     labels_1 = {**common_labels, "vpn": "active_ravpn_tunnels"}
     labels_2 = {**common_labels, "vpn": "inactive_ravpn_tunnels"}
