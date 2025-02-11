@@ -13,7 +13,7 @@ from mockseries.trend import LinearTrend
 from mockseries.utils import datetime_range
 from features.steps.cdo_apis import get, post
 from features.steps.env import get_endpoints, Path
-from features.steps.utils import get_common_labels, is_data_not_present
+from features.steps.utils import get_common_labels, is_data_present
 
 t = Template(
     """# HELP $metric_name $description
@@ -147,7 +147,7 @@ def is_device_present_with_ra_vpn_data(context):
     ]
     query = 'query=vpn{{uuid="{uuid}"}}'
     for device in available_devices:
-        if not is_data_not_present(
+        if is_data_present(
             query.format(uuid=device.device_record_uid), timedelta(days=365), "60m"
         ):
             context.scenario_to_device_map[context.scenario] = device
