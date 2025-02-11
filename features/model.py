@@ -27,5 +27,7 @@ class ScenarioEnum(str, Enum):
         "Push data and test correlation alerts for MEMORY_SNORT_THRESHOLD_BREACH"
     )
     RAVPN_FORECAST = "Testing RA-VPN forecasting"
-    ANOMALY_CONNECTION = "Testing Anomaly Detection for Connection Stats"
+    ANOMALY_CONNECTION = (
+        "Testing Anomaly Detection for Connection Stats With Simple Linear Spike"
+    )
     UNKOWN_SCENARIO = "Unkown scneario"

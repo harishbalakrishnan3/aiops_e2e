@@ -117,13 +117,13 @@ def find_device_available_for_data_ingestion(
     available_devices: list, query: str, duration: timedelta
 ):
     for device in available_devices:
-        if is_data_not_present(query.format(uuid=device.device_record_uid), duration):
+        if not is_data_present(query.format(uuid=device.device_record_uid), duration):
             return device
     print("No device available for ingestion , Failing test")
     raise ("No device available for ingestion")
 
 
-def is_data_not_present(query: str, duration: timedelta, step="5m"):
+def is_data_present(query: str, duration: timedelta, step="5m"):
     # Calculate the start and end times
     start_time = datetime.now() - duration
     end_time = datetime.now()
@@ -135,10 +135,7 @@ def is_data_not_present(query: str, duration: timedelta, step="5m"):
     endpoint = f"{get_endpoints().PROMETHEUS_RANGE_QUERY_URL}?{query}&start={start_time_epoch}&end={end_time_epoch}&step={step}"
     print(endpoint)
     response = get(endpoint, print_body=False)
-    if len(response["data"]["result"]) > 0:
-        return False
-
-    return True
+    return len(response["data"]["result"]) > 0
 
 
 def generate_synthesized_ts_obj(
