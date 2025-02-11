@@ -28,4 +28,4 @@ class ScenarioEnum(str, Enum):
     )
     RAVPN_FORECAST = "Testing RA-VPN forecasting"
     ANOMALY_CONNECTION = "Testing Anomaly Detection for Connection Stats"
-    UNKOWN_SCENARIO = "Unkown scneario"
+    UNKNOWN_SCENARIO = "Unknown scenario"

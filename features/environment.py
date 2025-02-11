@@ -1,6 +1,5 @@
 import json
 import os
-from datetime import datetime, timedelta
 
 import jwt
 from behave.model_core import Status
@@ -108,7 +107,7 @@ def before_scenario(context, scenario):
     try:
         context.scenario = ScenarioEnum(scenario.name)
     except:
-        context.scenario = ScenarioEnum.UNKOWN_SCENARIO
+        context.scenario = ScenarioEnum.UNKNOWN_SCENARIO
 
 
 def after_scenario(context, scenario):
