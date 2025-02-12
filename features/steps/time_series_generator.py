@@ -46,7 +46,7 @@ default_noise = NoiseConfig(
 )
 default_seasonality = SeasonalityConfig(
     enable=True,
-    seasonality_list=[SinusoidalSeasonality(amplitude=3, period=timedelta(hours=6))],
+    seasonality_list=[SinusoidalSeasonality(amplitude=200, period=timedelta(hours=6))],
 )
 
 
@@ -93,6 +93,7 @@ def generate_timeseries(
 ) -> pd.DataFrame:
     now = datetime.now() + time_config.time_offset
     switch = None
+    time_series = None
     if time_config.transition is None:
         switch = Switch(
             start_time=now - time_config.duration + time_config.transition_start,

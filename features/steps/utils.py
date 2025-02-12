@@ -8,7 +8,13 @@ from pydantic import BaseModel
 from features.model import ScenarioEnum, Device
 from features.steps.env import get_endpoints
 from features.steps.cdo_apis import get
-from time_series_generator import generate_timeseries, TimeConfig, SeasonalityConfig
+from time_series_generator import (
+    NoiseConfig,
+    generate_timeseries,
+    TimeConfig,
+    SeasonalityConfig,
+)
+from mockseries.seasonality.sinusoidal_seasonality import SinusoidalSeasonality
 
 
 class GeneratedData(BaseModel, arbitrary_types_allowed=True):
@@ -103,10 +109,9 @@ def get_appropriate_device(context, duration) -> Device:
             ]
             query = 'query=vpn{{uuid="{uuid}"}}'
         case ScenarioEnum.ANOMALY_CONNECTION:
-            available_devices = [
-                device for device in context.devices if device.ra_vpn_enabled == True
-            ]
             query = 'query=conn_stats{{uuid="{uuid}"}}'
+        case ScenarioEnum.ANOMALY_THROUGHPUT:
+            query = 'query=interface{{interface="all", description="input_bytes", uuid="{uuid}"}} or interface{{interface="all", description="output_bytes", uuid="{uuid}"}}'
         case _:
             print("No matching scenarios found , picking up the last available device")
             return context.devices[-1]
@@ -148,6 +153,7 @@ def generate_synthesized_ts_obj(
     start_spike_minute: int,
     duration: int,
     time_offset: timedelta,
+    metric_type: str = "gauge",
 ) -> GeneratedData:
     generated_data = generate_timeseries(
         TimeConfig(
@@ -163,6 +169,8 @@ def generate_synthesized_ts_obj(
         seasonality_config=SeasonalityConfig(enable=False),
     )
 
+    if metric_type == "counter":
+        generated_data["y"] = generated_data["y"].cumsum()
     return GeneratedData(
         metric_name=metric_name,
         values=generated_data,
