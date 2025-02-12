@@ -172,6 +172,9 @@ def step_impl(context, duration):
         metric_type = (
             row["metric_type"] if "metric_type" in context.table.headings else "gauge"
         )
+        amplitude = (
+            int(row["amplitude"]) if "amplitude" in context.table.headings else 20
+        )
 
         start_time = datetime.now() - duration_delta
         generated_data = generate_timeseries(
@@ -193,7 +196,8 @@ def step_impl(context, duration):
                 enable=True,
                 seasonality_list=[
                     SinusoidalSeasonality(
-                        amplitude=8000, period=timedelta(hours=seasonality_period_hours)
+                        amplitude=amplitude,
+                        period=timedelta(hours=seasonality_period_hours),
                     )
                 ],
             ),
