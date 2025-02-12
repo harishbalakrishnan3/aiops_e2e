@@ -54,7 +54,7 @@ default_noise = NoiseConfig(
 )
 default_seasonality = SeasonalityConfig(
     enable=True,
-    seasonality_list=[SinusoidalSeasonality(amplitude=3, period=timedelta(hours=6))],
+    seasonality_list=[SinusoidalSeasonality(amplitude=200, period=timedelta(hours=6))],
 )
 
 

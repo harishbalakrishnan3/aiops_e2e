@@ -94,7 +94,9 @@ def step_impl(context, duration, live_duration):
         spike_duration_minutes = int(row["spike_duration_minutes"])
         label_string = row["label_values"]
         metric_name = row["metric_name"]
-
+        metric_type = (
+            row["metric_type"] if "metric_type" in context.table.headings else "gauge"
+        )
         synthesized_ts_obj = generate_synthesized_ts_obj(
             context=context,
             metric_name=metric_name,
@@ -105,6 +107,7 @@ def step_impl(context, duration, live_duration):
             spike_duration_minutes=spike_duration_minutes,
             time_offset=timedelta(minutes=live_duration),
             duration=duration,
+            metric_type=metric_type,
         )
         synthesized_ts_list.append(synthesized_ts_obj)
 
@@ -139,7 +142,7 @@ t = Template(
     """{%- for backfill_data in backfill_data_list %}
 # HELP {{backfill_data.metric_name}} {{backfill_data.description}}
 # TYPE {{backfill_data.metric_name}} gauge
-{% for series in backfill_data.series -%}
+{% for series in backfill_data.series %}
 {{backfill_data.metric_name}}{{ "{" }}{{  series.labels }}{{ "}" }} {{ series.value[index] }} {{ series.timestamp[index] }}
 {%- endfor -%}
 {% endfor %}
@@ -166,6 +169,9 @@ def step_impl(context, duration):
         label_string = row["label_values"]
         seasonality_period_hours = int(row["seasonality_period_hours"])
         metric_name = row["metric_name"]
+        metric_type = (
+            row["metric_type"] if "metric_type" in context.table.headings else "gauge"
+        )
 
         generated_data = generate_timeseries(
             time_config=TimeConfig(
@@ -188,11 +194,14 @@ def step_impl(context, duration):
                 enable=True,
                 seasonality_list=[
                     SinusoidalSeasonality(
-                        amplitude=3, period=timedelta(hours=seasonality_period_hours)
+                        amplitude=8000, period=timedelta(hours=seasonality_period_hours)
                     )
                 ],
             ),
         )
+
+        if metric_type == "counter":
+            generated_data["y"] = generated_data["y"].cumsum()
 
         generated_data_list.append(
             GeneratedData(
@@ -212,9 +221,8 @@ def step_impl(context, duration):
             multiline_text = t.render(backfill_data_list=backfill_data_list, index=i)
             file_text += multiline_text
 
-        # remove first line (as there will be an empty line)
-        output_lines = file_text.splitlines()
-        output_lines.pop(0)
+        # remove all empty lines
+        output_lines = [line for line in file_text.splitlines() if line.strip()]
         file_text = "\n".join(output_lines)
 
         file.write(file_text)
