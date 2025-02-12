@@ -173,18 +173,17 @@ def step_impl(context, duration):
             row["metric_type"] if "metric_type" in context.table.headings else "gauge"
         )
 
+        start_time = datetime.now() - duration_delta
         generated_data = generate_timeseries(
             time_config=TimeConfig(
                 series_config=SeriesConfig(
                     start_value=start_value,
                     end_value=end_value,
-                    start_time=datetime.now() - duration_delta,
+                    start_time=start_time,
                     duration=duration_delta,
                 ),
                 transition_config=TransitionConfig(
-                    start_time=datetime.now()
-                    - duration_delta
-                    + timedelta(minutes=start_spike_minute),
+                    start_time=start_time + timedelta(minutes=start_spike_minute),
                     transition=LinearTransition(
                         transition_window=timedelta(minutes=spike_duration_minutes)
                     ),
