@@ -8,7 +8,13 @@ from pydantic import BaseModel
 from features.model import ScenarioEnum, Device
 from features.steps.env import get_endpoints
 from features.steps.cdo_apis import get
-from time_series_generator import generate_timeseries, TimeConfig, SeasonalityConfig
+from time_series_generator import (
+    generate_timeseries,
+    TimeConfig,
+    SeasonalityConfig,
+    SeriesConfig,
+    TransitionConfig,
+)
 
 
 class GeneratedData(BaseModel, arbitrary_types_allowed=True):
@@ -149,16 +155,22 @@ def generate_synthesized_ts_obj(
     duration: int,
     time_offset: timedelta,
 ) -> GeneratedData:
+    now = datetime.now()
     generated_data = generate_timeseries(
-        TimeConfig(
-            start_value=start_value,
-            end_value=end_value,
-            transition_start=timedelta(minutes=start_spike_minute),
-            transition=LinearTransition(
-                transition_window=timedelta(minutes=spike_duration_minutes)
+        time_config=TimeConfig(
+            series_config=SeriesConfig(
+                start_time=now - timedelta(minutes=duration) + time_offset,
+                duration=timedelta(minutes=duration),
+                start_value=start_value,
+                end_value=end_value,
+                step=timedelta(minutes=1),
             ),
-            duration=timedelta(minutes=duration),
-            time_offset=time_offset,
+            transition_config=TransitionConfig(
+                transition=LinearTransition(
+                    transition_window=timedelta(minutes=spike_duration_minutes)
+                ),
+                start_time=now + timedelta(minutes=start_spike_minute),
+            ),
         ),
         seasonality_config=SeasonalityConfig(enable=False),
     )

@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 
 from mockseries.noise import RedNoise
+from mockseries.transition.transition import Transition
 from mockseries.trend import Switch
-from mockseries.transition.lambda_transition import LambdaTransition
 from mockseries.seasonality.seasonality import Seasonality
 from mockseries.seasonality.sinusoidal_seasonality import SinusoidalSeasonality
 from mockseries.utils import datetime_range
@@ -15,14 +15,22 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 
-class TimeConfig(BaseModel, arbitrary_types_allowed=True):
+class SeriesConfig(BaseModel, arbitrary_types_allowed=True):
     start_value: float
     end_value: float
-    transition_start: timedelta
-    transition: Optional[LambdaTransition] = None
+    start_time: datetime = datetime.now()
     duration: timedelta
-    time_offset: timedelta = timedelta(minutes=0)
     step: timedelta = timedelta(minutes=1)
+
+
+class TransitionConfig(BaseModel, arbitrary_types_allowed=True):
+    start_time: datetime
+    transition: Optional[Transition] = None
+
+
+class TimeConfig(BaseModel, arbitrary_types_allowed=True):
+    series_config: SeriesConfig
+    transition_config: Optional[TransitionConfig] = None
 
 
 class NoiseConfig(BaseModel, arbitrary_types_allowed=True):
@@ -91,20 +99,19 @@ def generate_timeseries(
     seasonality_config: SeasonalityConfig = default_seasonality,
     missing_data_configs: List[MissingDataConfig] | None = None,
 ) -> pd.DataFrame:
-    now = datetime.now() + time_config.time_offset
     switch = None
-    if time_config.transition is None:
+    if time_config.transition_config is None:
         switch = Switch(
-            start_time=now - time_config.duration + time_config.transition_start,
-            base_value=time_config.start_value,
-            switch_value=time_config.end_value,
+            start_time=time_config.transition_config.start_time,
+            base_value=time_config.series_config.start_value,
+            switch_value=time_config.series_config.end_value,
         )
     else:
         switch = Switch(
-            start_time=now - time_config.duration + time_config.transition_start,
-            base_value=time_config.start_value,
-            switch_value=time_config.end_value,
-            transition=time_config.transition,
+            start_time=time_config.transition_config.start_time,
+            base_value=time_config.series_config.start_value,
+            switch_value=time_config.series_config.end_value,
+            transition=time_config.transition_config.transition,
         )
     time_series = switch
 
@@ -117,16 +124,19 @@ def generate_timeseries(
             time_series = time_series + noise
 
     time_points = datetime_range(
-        granularity=time_config.step,
-        start_time=now - time_config.duration,
-        end_time=now,
+        granularity=time_config.series_config.step,
+        start_time=time_config.series_config.start_time,
+        end_time=time_config.series_config.start_time
+        + time_config.series_config.duration,
     )
 
     ts_values = time_series.generate(time_points=time_points)
 
     if missing_data_configs is not None:
         for missing_data_config in missing_data_configs:
-            missing_data = generate_missing_data(missing_data_config, time_config.step)
+            missing_data = generate_missing_data(
+                missing_data_config, time_config.series_config.step
+            )
 
             # Find the first index in timepoints corresponding to the start time of the missing data
             start_index = find_closest_index(
