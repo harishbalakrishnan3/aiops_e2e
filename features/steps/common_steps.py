@@ -18,7 +18,7 @@ from features.steps.cdo_apis import (
     verify_insight_type_and_state,
     get_insights,
 )
-from datetime import timedelta
+from datetime import timedelta, datetime
 from features.steps.metrics import instant_remote_write
 from features.steps.utils import (
     generate_synthesized_ts_obj,
@@ -26,7 +26,13 @@ from features.steps.utils import (
     GeneratedData,
     get_label_map,
 )
-from time_series_generator import generate_timeseries, TimeConfig, SeasonalityConfig
+from time_series_generator import (
+    generate_timeseries,
+    TimeConfig,
+    SeasonalityConfig,
+    SeriesConfig,
+    TransitionConfig,
+)
 from mockseries.transition import LinearTransition
 from mockseries.seasonality.sinusoidal_seasonality import SinusoidalSeasonality
 
@@ -167,15 +173,21 @@ def step_impl(context, duration):
             row["metric_type"] if "metric_type" in context.table.headings else "gauge"
         )
 
+        start_time = datetime.now() - duration_delta
         generated_data = generate_timeseries(
-            TimeConfig(
-                start_value=start_value,
-                end_value=end_value,
-                transition_start=timedelta(minutes=start_spike_minute),
-                transition=LinearTransition(
-                    transition_window=timedelta(minutes=spike_duration_minutes)
+            time_config=TimeConfig(
+                series_config=SeriesConfig(
+                    start_value=start_value,
+                    end_value=end_value,
+                    start_time=start_time,
+                    duration=duration_delta,
                 ),
-                duration=duration_delta,
+                transition_config=TransitionConfig(
+                    start_time=start_time + timedelta(minutes=start_spike_minute),
+                    transition=LinearTransition(
+                        transition_window=timedelta(minutes=spike_duration_minutes)
+                    ),
+                ),
             ),
             seasonality_config=SeasonalityConfig(
                 enable=True,
