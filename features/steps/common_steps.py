@@ -1,3 +1,4 @@
+import json
 import os
 import subprocess
 import time
@@ -11,10 +12,11 @@ from features.steps.utils import (
     check_if_data_present,
     convert_to_backfill_data,
 )
-from features.steps.env import Path
+from features.steps.env import Path, get_endpoints
 from features.steps.metrics import batch_remote_write
 from features.steps.cdo_apis import (
     delete_insights,
+    post,
     verify_insight_type_and_state,
     get_insights,
 )
@@ -148,6 +150,48 @@ t = Template(
 {% endfor %}
 """
 )
+
+
+module_name_to_subscriber = {
+    "RAVPN": {
+        "subscriber": "RAVPN_MAX_SESSIONS_BREACH_FORECAST",
+        "destination": "ai-ops-forecast",
+    },
+    "CONNECTIONS": {
+        "subscriber": "CONNECTIONS_ANOMALY_FORECAST_TRIGGER",
+        "destination": "ai-ops-anomaly-detection",
+    },
+    "THROUGHPUT": {
+        "subscriber": "THROUGHPUT_ANOMALY_FORECAST_TRIGGER",
+        "destination": "ai-ops-anomaly-detection",
+    },
+}
+
+
+@step("trigger the {module_name} forecasting workflow")
+def step_impl(context, module_name):
+    payload = {
+        "subscriber": module_name_to_subscriber[module_name]["subscriber"],
+        "trigger-type": "SCHEDULE_TICKS",
+        "config": {"periodicity": "INTERVAL_24_HOURS"},
+        "pipeline": {
+            "output": [
+                {
+                    "plugin": "SNS",
+                    "config": {
+                        "destination": module_name_to_subscriber[module_name][
+                            "destination"
+                        ]
+                    },
+                }
+            ],
+            "processor": [],
+        },
+        "deviceIds": ["886db434-b93a-11ef-be41-f1b0f896e566"],
+        "timestamp": "2024-08-21T05:55:00.000",
+        "attributes": {},
+    }
+    post(get_endpoints().TRIGGER_MANAGER_URL, json.dumps(payload))
 
 
 @step("backfill metrics for a suitable device over {duration} hour(s)")

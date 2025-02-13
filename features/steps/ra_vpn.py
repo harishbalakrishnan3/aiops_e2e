@@ -23,7 +23,7 @@ $metric_name{$labels_2} $value $timestamp
 """
 )
 
-# TODO : Make this dynamic
+# TODO : Cleanup unused backfill RAV-VPN code after stability testing
 HISTORICAL_DATA_FILE = "ravpn_historical_data.txt"
 
 
@@ -123,25 +123,6 @@ def step_impl(context):
         time.sleep(60)
         # TODO: Ingest live data till backfill data is available
     assert success
-
-
-@step("trigger the RAVPN forecasting workflow")
-def step_impl(context):
-    payload = {
-        "subscriber": "RAVPN_MAX_SESSIONS_BREACH_FORECAST",
-        "trigger-type": "SCHEDULE_TICKS",
-        "config": {"periodicity": "INTERVAL_24_HOURS"},
-        "pipeline": {
-            "output": [{"plugin": "SNS", "config": {"destination": "ai-ops-forecast"}}],
-            "processor": [],
-        },
-        "deviceIds": [
-            context.scenario_to_device_map[context.scenario].device_record_uid
-        ],
-        "timestamp": "2024-08-21T05:55:00.000",
-        "attributes": {},
-    }
-    post(get_endpoints().TRIGGER_MANAGER_URL, json.dumps(payload))
 
 
 def is_device_present_with_ra_vpn_data(context):
