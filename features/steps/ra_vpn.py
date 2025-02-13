@@ -66,6 +66,7 @@ def step_impl(context):
 
     remote_write_config = context.remote_write_config
 
+    start_time = time.time()
     subprocess.run(
         [
             os.path.join(Path.PYTHON_UTILS_ROOT, "backfill.sh"),
@@ -77,6 +78,8 @@ def step_impl(context):
             HISTORICAL_DATA_FILE,
         ],
     )
+    end_time = time.time()
+    print(f"Backfill took {(end_time - start_time)/60:.2f} minutes")
 
     # Calculate the start and end times
     start_time = datetime.now() - timedelta(days=14)
