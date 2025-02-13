@@ -1,7 +1,8 @@
 .idea
 .env
-utils/historical_data.txt
-utils/data/*
+utils/*_historical_data.txt
+utils/*_historical_data.txt
+utils/*_data/*
 utils/mimirtool
 utils/promtool
 utils/prometheus
