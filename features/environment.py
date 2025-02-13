@@ -74,16 +74,18 @@ def update_device_details(context):
     ra_vpn_devices = []  # List of only the devices with RA-VPN enabled
     device_details = get(get_endpoints().DEVICES_DETAILS_URL, print_body=False)
     for device in device_details:
-        ra_vpn_enabled = False
-        if device["metadata"]["deviceRecordUuid"] in ra_vpn_enabled_devices:
-            ra_vpn_enabled = True
-            ra_vpn_devices.append(device)
         device_obj = Device(
             device_name=device["name"],
             aegis_device_uid=device["uid"],
             device_record_uid=device["metadata"]["deviceRecordUuid"],
-            ra_vpn_enabled=ra_vpn_enabled,
         )
+        ra_vpn_enabled = False
+        if is_ra_vpn_enabled(
+            ra_vpn_enabled_devices, device["metadata"]["deviceRecordUuid"]
+        ):
+            ra_vpn_enabled = True
+            ra_vpn_devices.append(device_obj)
+        device_obj.ra_vpn_enabled = ra_vpn_enabled
         available_devices.append(device_obj)
 
     context.devices = available_devices
