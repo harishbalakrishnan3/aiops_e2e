@@ -80,7 +80,7 @@ def convert_str_list_to_dict(s):
 
 def get_appropriate_device(context, duration) -> Device:
     """
-    Pickup a device for by scenario . Find a devuce where the to be ingested data is not present in the duration specified . This will avoid data ingwstion failures due to existing data in the prometheus
+    Pickup a device for by scenario . Find a device where the to be ingested data is not present in the duration specified . This will avoid data ingestion failures due to existing data in the prometheus
 
     :param context: behave context
     :param duration: duration for which data will be ingested

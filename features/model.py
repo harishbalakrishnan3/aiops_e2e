@@ -6,7 +6,7 @@ class Device(BaseModel):
     device_name: str
     aegis_device_uid: str
     device_record_uid: str
-    ra_vpn_enabled: bool
+    ra_vpn_enabled: bool = False
 
 
 class ScenarioEnum(str, Enum):

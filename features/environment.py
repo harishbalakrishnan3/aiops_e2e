@@ -70,20 +70,32 @@ def update_device_details(context):
     print(resp.json())
     ra_vpn_enabled_devices = json.loads(resp.json()["data"]["responseBody"])
 
-    available_devices = []
+    available_devices = []  # List of all the available devices
+    ra_vpn_devices = []  # List of only the devices with RA-VPN enabled
     device_details = get(get_endpoints().DEVICES_DETAILS_URL, print_body=False)
     for device in device_details:
         device_obj = Device(
             device_name=device["name"],
             aegis_device_uid=device["uid"],
             device_record_uid=device["metadata"]["deviceRecordUuid"],
-            ra_vpn_enabled=is_ra_vpn_enabled(
-                ra_vpn_enabled_devices, device["metadata"]["deviceRecordUuid"]
-            ),
         )
+        ra_vpn_enabled = False
+        if is_ra_vpn_enabled(
+            ra_vpn_enabled_devices, device["metadata"]["deviceRecordUuid"]
+        ):
+            ra_vpn_enabled = True
+            ra_vpn_devices.append(device_obj)
+        device_obj.ra_vpn_enabled = ra_vpn_enabled
         available_devices.append(device_obj)
 
     context.devices = available_devices
+
+    print(
+        f"There are {len(available_devices)} devices available with {len(ra_vpn_devices)} devices having RA-VPN enabled"
+    )
+    print(
+        f"Devices with RA-VPN enabled: {[device.device_name for device in ra_vpn_devices]}"
+    )
 
     if not any(device.ra_vpn_enabled for device in available_devices):
         raise Exception("RA-VPN gateway not found")
