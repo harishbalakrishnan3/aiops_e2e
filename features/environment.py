@@ -91,6 +91,9 @@ def update_device_details(context):
     print(
         f"There are {len(available_devices)} devices available with {len(ra_vpn_devices)} devices having RA-VPN enabled"
     )
+    print(
+        f"Devices with RA-VPN enabled: {[device.device_name for device in ra_vpn_devices]}"
+    )
 
     if not any(device.ra_vpn_enabled for device in available_devices):
         raise Exception("RA-VPN gateway not found")
