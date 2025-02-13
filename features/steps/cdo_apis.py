@@ -58,19 +58,17 @@ def verify_insight_type_and_state(context, insight_type, state):
     return False
 
 
-
 def post_onboard_action():
     return post(endpoints.TENANT_ONBOARD_URL, expected_return_code=202)
 
+
 def post_offboard_action():
-    payload = {
-        "cleanupType": "SHALLOW"
-    }
+    payload = {"cleanupType": "SHALLOW"}
     return post(endpoints.TENANT_OFFBOARD_URL, json.dumps(payload), 202)
 
-  
+
 def get_onboard_status():
-    return get(endpoints.TENANT_STATUS_URL, print_body=False)
+    return get(endpoints.TENANT_STATUS_URL, print_body=True)
 
 
 def get(endpoint, print_body=True):

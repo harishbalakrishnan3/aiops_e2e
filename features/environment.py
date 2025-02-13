@@ -36,7 +36,7 @@ def before_all(context):
     # Initialize a flag to track failures
     context.stop_execution = False
 
-    # Initialize map between a scenartio and a device (each scenario can have an associated device)
+    # Initialize map between a scenario and a device (each scenario can have an associated device)
     context.scenario_to_device_map = {}
 
     # Get the remote write config for GCM
@@ -113,6 +113,12 @@ def before_scenario(context, scenario):
 def after_scenario(context, scenario):
     if scenario.status == Status.failed:
         context.stop_execution = True
+
+
+def after_all(context):
+    print("Selected device for each scenario is as follows")
+    for scenario, device in context.scenario_to_device_map.items():
+        print(f"{scenario}: {device}")
 
 
 def get_gcm_remote_write_config():
