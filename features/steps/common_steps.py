@@ -61,6 +61,18 @@ def step_impl(context, insight_type, insight_state, timeout):
     assert_that(False)
 
 
+@step(
+    "verify if an {insight_type} insight with state {insight_state} is not created with a timeout of {timeout} minute(s)"
+)
+def step_impl(context, insight_type, insight_state, timeout):
+    for i in range(int(timeout)):
+        if verify_insight_type_and_state(context, insight_type, insight_state):
+            assert_that(False)
+            return
+        time.sleep(60)
+    assert_that(True)
+
+
 @step("verify no insight is present with a timeout of {timeout} minute(s)")
 def step_impl(context, timeout):
     for i in range(int(timeout)):
