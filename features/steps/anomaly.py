@@ -54,7 +54,6 @@ def step_impl(context, duration):
                 duration=timedelta(minutes=int(duration)),
                 start_value=200,
                 end_value=200,
-                step=timedelta(minutes=1),
             ),
             transition_config=TransitionConfig(
                 start_time=now,

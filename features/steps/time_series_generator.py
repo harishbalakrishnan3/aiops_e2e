@@ -155,6 +155,6 @@ def generate_spikes(spike_pattern, spike_multiplier, ts_values):
     # Cycle through the spike pattern
     for i in range(len(ts_values)):
         if spike_pattern[i % len(spike_pattern)]:
-            ts_values[i] = ts_values[i] * spike_multiplier
+            ts_values[i] *= spike_multiplier
 
     return ts_values
