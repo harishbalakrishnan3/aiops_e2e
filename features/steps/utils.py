@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from features.model import ScenarioEnum, Device
 from features.steps.env import get_endpoints
 from features.steps.cdo_apis import get
-from time_series_generator import (
+from features.steps.time_series_generator import (
     generate_timeseries,
     TimeConfig,
     SeasonalityConfig,
@@ -213,7 +213,9 @@ def split_data_for_batch_and_live_ingestion(
     return [synthesized_ts_list_for_batch_fill, synthesized_ts_list_for_live_fill]
 
 
-def check_if_data_present(context, metric_name: str, duration_delta: timedelta) -> bool:
+def check_if_data_present(
+    metric_name: str, duration_delta: timedelta, labels: dict = {}
+) -> bool:
     start_time = datetime.now() - duration_delta
     end_time = datetime.now()
 
@@ -221,8 +223,7 @@ def check_if_data_present(context, metric_name: str, duration_delta: timedelta) 
     start_time_epoch = int(start_time.timestamp())
     end_time_epoch = int(end_time.timestamp())
 
-    query = f'?query={metric_name}{{uuid="{context.scenario_to_device_map[context.scenario].device_record_uid}"}}&start={start_time_epoch}&end={end_time_epoch}&step=5m'
-
+    query = f"?query={metric_name}{{{format_device_labels(labels)}}}&start={start_time_epoch}&end={end_time_epoch}&step=5m"
     return start_polling(query=query, retry_count=60, retry_frequency_seconds=60)
 
 
@@ -263,6 +264,10 @@ def get_index_of_metric_object(
     return -1
 
 
+def format_device_labels(labels: dict):
+    return ",".join([f'{k}="{v}"' for k, v in labels.items()])
+
+
 def convert_to_backfill_data(
     generated_data_list: List[GeneratedData],
 ) -> List[BackfillData]:
@@ -271,7 +276,7 @@ def convert_to_backfill_data(
         update_index = get_index_of_metric_object(backfill_data_list, generated_data)
 
         series = Series(
-            labels=",".join([f'{k}="{v}"' for k, v in generated_data.labels.items()]),
+            labels=format_device_labels(generated_data.labels),
             value=generated_data.values["y"].tolist(),
             timestamp=generated_data.values["ds"].astype(int).tolist(),
         )
