@@ -108,7 +108,10 @@ def get_appropriate_device(context, duration) -> Device:
                 device for device in context.devices if device.ra_vpn_enabled == True
             ]
             query = 'query=vpn{{uuid="{uuid}"}}'
-        case ScenarioEnum.ANOMALY_CONNECTION:
+        case (
+            ScenarioEnum.ANOMALY_CONNECTION
+            | ScenarioEnum.ANOMALY_CONNECTION_INTERMITTENT_SPIKES
+        ):
             query = 'query=conn_stats{{uuid="{uuid}"}}'
         case ScenarioEnum.ANOMALY_THROUGHPUT:
             query = 'query=interface{{interface="all", description="input_bytes", uuid="{uuid}"}} or interface{{interface="all", description="output_bytes", uuid="{uuid}"}}'

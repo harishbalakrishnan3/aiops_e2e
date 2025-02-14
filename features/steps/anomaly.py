@@ -1,9 +1,20 @@
 import time
 from behave import *
 from hamcrest import assert_that
+from mockseries.transition import LinearTransition
+
 from features.model import Device
-from datetime import timedelta
-from features.steps.utils import is_data_present
+from datetime import timedelta, datetime
+
+from features.steps.metrics import instant_remote_write
+from features.steps.time_series_generator import (
+    generate_timeseries,
+    TimeConfig,
+    SeriesConfig,
+    TransitionConfig,
+    generate_spikes,
+)
+from features.steps.utils import is_data_present, get_common_labels
 
 
 def is_anomaly_upper_lower_bounds_present(
@@ -28,3 +39,39 @@ def step_impl(context, metric_name, duration):
             return
         time.sleep(60)
     assert_that(False)
+
+
+@step("push data that is intermittently anomalous for {duration} minute(s)")
+def step_impl(context, duration):
+    labels = {"conn_stats": "connection", "description": "in_use"} | get_common_labels(
+        context, timedelta(days=14)
+    )
+    now = datetime.now()
+    live_data = generate_timeseries(
+        time_config=TimeConfig(
+            series_config=SeriesConfig(
+                start_time=now,
+                duration=timedelta(minutes=int(duration)),
+                start_value=200,
+                end_value=200,
+            ),
+            transition_config=TransitionConfig(
+                start_time=now,
+                transition=LinearTransition(
+                    transition_window=timedelta(minutes=int(duration)),
+                ),
+            ),
+        ),
+    )
+
+    live_data["y"] = generate_spikes(
+        spike_pattern=[0, 1, 1, 0, 0], spike_multiplier=5, ts_values=live_data["y"]
+    )
+
+    live_data_list = live_data["y"].tolist()
+
+    for i in range(int(duration)):
+        instant_remote_write("conn_stats", labels, live_data_list[i])
+        time.sleep(60)
+
+    pass
