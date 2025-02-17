@@ -170,11 +170,11 @@ module_name_to_subscriber = {
         "destination": "ai-ops-forecast",
     },
     "CONNECTIONS": {
-        "subscriber": "CONNECTIONS_ANOMALY_FORECAST_TRIGGER",
+        "subscriber": "CONNECTIONS_ANOMALY",
         "destination": "ai-ops-anomaly-detection",
     },
     "THROUGHPUT": {
-        "subscriber": "THROUGHPUT_ANOMALY_FORECAST_TRIGGER",
+        "subscriber": "THROUGHPUT_ANOMALY",
         "destination": "ai-ops-anomaly-detection",
     },
 }
