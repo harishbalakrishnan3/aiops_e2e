@@ -12,6 +12,7 @@ from features.steps.utils import (
     check_if_data_present,
     convert_to_backfill_data,
 )
+from model import ScenarioEnum
 from features.steps.env import Path, get_endpoints
 from features.steps.metrics import batch_remote_write
 from features.steps.cdo_apis import (
@@ -206,17 +207,87 @@ def step_impl(context, module_name):
     post(get_endpoints().TRIGGER_MANAGER_URL, json.dumps(payload))
 
 
+@step(
+    "prepare backfill metrics for {scenario} for a suitable device over {duration} hour(s)"
+)
+def step_impl(context, scenario, duration):
+    context.scenario = ScenarioEnum[scenario]
+    generated_data_list = generate_data_for_input(
+        context, timedelta(hours=int(duration))
+    )
+    context.generated_data_list.extend(generated_data_list)
+
+
+@step("start backfill")
+def step_impl(context):
+    backfill_generated_data(context, context.generated_data_list)
+    assert check_if_backfilled_data_present(context.generated_data_list)
+
+
 @step("backfill metrics for a suitable device over {duration} hour(s)")
 def step_impl(context, duration):
+    duration_delta = timedelta(hours=int(duration))
+    generated_data_list = generate_data_for_input(context, duration_delta)
+    backfill_generated_data(context, generated_data_list)
+    assert check_if_backfilled_data_present(context.generated_data_list)
+
+
+def check_if_backfilled_data_present(generated_data_list: List[GeneratedData]):
+    for generated_data in generated_data_list:
+        start = generated_data.values["ds"].iloc[0]
+        end = generated_data.values["ds"].iloc[-1]
+        duration_hours = (end - start) / 60
+
+        if not check_if_data_present(
+            generated_data.metric_name,
+            timedelta(hours=duration_hours),
+            generated_data.labels,
+        ):
+            return False
+    return True
+
+
+def backfill_generated_data(context, generated_data_list: List[GeneratedData]):
+    historical_data_file = "{}_historical_data.txt".format(context.scenario)
+    data_block_directory = "/{}_data/".format(context.scenario)
+
+    # At this point we can have same metrics as multiple objects
+    # we need to combine same metric name to a single object (single block)
+    # each unique label tuple should have seprate entry in block
+    backfill_data_list = convert_to_backfill_data(generated_data_list)
+    file_text = ""
+    with open(os.path.join(Path.PYTHON_UTILS_ROOT, historical_data_file), "w") as file:
+        for i in range(len(backfill_data_list[0].series[0].value)):
+            multiline_text = t.render(backfill_data_list=backfill_data_list, index=i)
+            file_text += multiline_text
+
+        # remove all empty lines
+        output_lines = [line for line in file_text.splitlines() if line.strip()]
+        file_text = "\n".join(output_lines)
+
+        file.write(file_text)
+        file.write("\n# EOF")
+
+    remote_write_config = context.remote_write_config
+    subprocess.run(
+        [
+            os.path.join(Path.PYTHON_UTILS_ROOT, "backfill.sh"),
+            remote_write_config["url"].removesuffix("/api/prom/push"),
+            remote_write_config["username"],
+            remote_write_config["password"],
+            Path.PYTHON_UTILS_ROOT,
+            data_block_directory,
+            historical_data_file,
+        ],
+    )
+
+
+def generate_data_for_input(context, duration_delta: timedelta) -> List[GeneratedData]:
     if context.remote_write_config is None:
         print("Remote write config not found. Skipping backfill.")
         assert False
 
-    historical_data_file = "{}_historical_data.txt".format(context.scenario)
-    data_block_directory = "/{}_data/".format(context.scenario)
-
-    duration_delta = timedelta(hours=int(duration))
-    generated_data_list: List[BackfillData] = []
+    generated_data_list: List[GeneratedData] = []
     for row in context.table:
         start_value = float(row["start_value"])
         end_value = float(row["end_value"])
@@ -269,37 +340,4 @@ def step_impl(context, duration):
                 labels=get_label_map(context, label_string, duration_delta),
             )
         )
-
-    # At this point we can have same metrics as multiple objects
-    # we need to combine same metric name to a single object (single block)
-    # each unique label tuple should have seprate entry in block
-    backfill_data_list = convert_to_backfill_data(generated_data_list)
-    file_text = ""
-    with open(os.path.join(Path.PYTHON_UTILS_ROOT, historical_data_file), "w") as file:
-        for i in range(len(backfill_data_list[0].series[0].value)):
-            multiline_text = t.render(backfill_data_list=backfill_data_list, index=i)
-            file_text += multiline_text
-
-        # remove all empty lines
-        output_lines = [line for line in file_text.splitlines() if line.strip()]
-        file_text = "\n".join(output_lines)
-
-        file.write(file_text)
-        file.write("\n# EOF")
-
-    remote_write_config = context.remote_write_config
-    subprocess.run(
-        [
-            os.path.join(Path.PYTHON_UTILS_ROOT, "backfill.sh"),
-            remote_write_config["url"].removesuffix("/api/prom/push"),
-            remote_write_config["username"],
-            remote_write_config["password"],
-            Path.PYTHON_UTILS_ROOT,
-            data_block_directory,
-            historical_data_file,
-        ],
-    )
-
-    assert check_if_data_present(
-        context, generated_data_list[0].metric_name, duration_delta
-    )
+    return generated_data_list

@@ -39,6 +39,9 @@ def before_all(context):
     # Initialize map between a scenario and a device (each scenario can have an associated device)
     context.scenario_to_device_map = {}
 
+    # Initialize list of generated data for each scenario for bulk backfill in scenario
+    context.generated_data_list = []
+
     # Get the remote write config for GCM
     context.remote_write_config = get_gcm_remote_write_config()
 
