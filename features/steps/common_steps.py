@@ -7,6 +7,8 @@ from typing import List
 from behave import *
 from hamcrest import assert_that
 from jinja2 import Template
+
+from features.model import Device
 from features.steps.utils import (
     BackfillData,
     check_if_data_present,
@@ -181,30 +183,39 @@ module_name_to_subscriber = {
 }
 
 
-@step("trigger the {module_name} forecasting workflow")
-def step_impl(context, module_name):
-    payload = {
-        "subscriber": module_name_to_subscriber[module_name]["subscriber"],
-        "trigger-type": "SCHEDULE_TICKS",
-        "config": {"periodicity": "INTERVAL_24_HOURS"},
-        "pipeline": {
-            "output": [
-                {
-                    "plugin": "SNS",
-                    "config": {
-                        "destination": module_name_to_subscriber[module_name][
-                            "destination"
-                        ]
-                    },
-                }
-            ],
-            "processor": [],
-        },
-        "deviceIds": ["886db434-b93a-11ef-be41-f1b0f896e566"],
-        "timestamp": "2024-08-21T05:55:00.000",
-        "attributes": {},
-    }
-    post(get_endpoints().TRIGGER_MANAGER_URL, json.dumps(payload))
+@step("trigger the {module_name} forecasting workflow through {method}")
+def step_impl(context, module_name, method):
+    if method == "SNS":
+        payload = {
+            "subscriber": module_name_to_subscriber[module_name]["subscriber"],
+            "trigger-type": "SCHEDULE_TICKS",
+            "config": {"periodicity": "INTERVAL_24_HOURS"},
+            "pipeline": {
+                "output": [
+                    {
+                        "plugin": "SNS",
+                        "config": {
+                            "destination": module_name_to_subscriber[module_name][
+                                "destination"
+                            ]
+                        },
+                    }
+                ],
+                "processor": [],
+            },
+            "deviceIds": ["886db434-b93a-11ef-be41-f1b0f896e566"],
+            "timestamp": "2024-08-21T05:55:00.000",
+            "attributes": {},
+        }
+        post(get_endpoints().TRIGGER_MANAGER_URL, json.dumps(payload))
+    else:
+        payload = {
+            "moduleName": module_name_to_subscriber[module_name]["subscriber"],
+        }
+        post(
+            get_endpoints().AI_OPS_ANOMALY_DETECTION_FORECAST_TRIGGER_URL,
+            json.dumps(payload),
+        )
 
 
 @step(
