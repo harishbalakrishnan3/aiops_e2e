@@ -49,6 +49,9 @@ class Endpoints:
         self.TENANT_GCM_STACK_CONFIG_URL = (
             self.BASE_URL + "/api/platform/ai-ops-tenant-services/v1/timeseries-stack"
         )
+        self.AI_OPS_ANOMALY_DETECTION_FORECAST_TRIGGER_URL = (
+            self.BASE_URL + "/api/platform/ai-ops-anomaly-detection/v1/trigger/forecast"
+        )
 
 
 def get_endpoints():
