@@ -102,7 +102,7 @@ def generate_timeseries(
     switch = None
     if time_config.transition_config is None:
         switch = Switch(
-            start_time=time_config.transition_config.start_time,
+            start_time=time_config.series_config.start_time,
             base_value=time_config.series_config.start_value,
             switch_value=time_config.series_config.end_value,
         )

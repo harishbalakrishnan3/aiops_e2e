@@ -159,10 +159,11 @@ def generate_synthesized_ts_obj(
     metric_type: str = "gauge",
 ) -> GeneratedData:
     now = datetime.now()
+    offsetted_start_time = now - timedelta(minutes=duration) + time_offset
     generated_data = generate_timeseries(
         time_config=TimeConfig(
             series_config=SeriesConfig(
-                start_time=now - timedelta(minutes=duration) + time_offset,
+                start_time=offsetted_start_time,
                 duration=timedelta(minutes=duration),
                 start_value=start_value,
                 end_value=end_value,
@@ -172,7 +173,7 @@ def generate_synthesized_ts_obj(
                 transition=LinearTransition(
                     transition_window=timedelta(minutes=spike_duration_minutes)
                 ),
-                start_time=now + timedelta(minutes=start_spike_minute),
+                start_time=offsetted_start_time + timedelta(minutes=start_spike_minute),
             ),
         ),
         seasonality_config=SeasonalityConfig(enable=False),
