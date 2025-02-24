@@ -34,14 +34,18 @@ Feature: Testing Anomaly Detection
     Then keep checking if interface_threshold upper and lower bounds are ingested for 120 minute(s)
     # There will be a break in data here (aprox 2hrs) while it backfills
     Then push timeseries for 120 minute(s) of which send last 10 minute(s) of timeseries in live mode
-      | metric_name            | label_values                              | metric_type        |   start_value       | end_value     | start_spike_minute | spike_duration_minutes   |
-      | interface              | interface=all, description=input_bytes    | counter            |   106500            |  606500       | 0                  | 110                      |
-      | interface              | interface=all, description=output_bytes   | counter            |   106500            |  606500       | 0                  | 110                      |
+      | metric_name            | label_values                               | metric_type        |   start_value       | end_value     | start_spike_minute | spike_duration_minutes   |
+      | interface              | interface=all, description=input_bytes     | counter            |   106500            |  606500       | 0                  | 110                      |
+      | interface              | interface=all, description=output_bytes    | counter            |   106500            |  606500       | 0                  | 110                      |
+      | interface              | interface=all, description=input_packets   | counter            |   106500            |  606500       | 0                  | 110                      |
+      | interface              | interface=all, description=output_packets  | counter            |   106500            |  606500       | 0                  | 110                      |
     Then verify if an THROUGHPUT_ANOMALY insight with state ACTIVE is created with a timeout of 10 minute(s)
     Then push timeseries for 2 minute(s) of which send last 2 minute(s) of timeseries in live mode
-      | metric_name            | label_values                              | metric_type        |   start_value       | end_value     | start_spike_minute | spike_duration_minutes   |
-      | interface              | interface=all, description=input_bytes    | counter            |   106500            |  221650       | 0                  | 1                        |
-      | interface              | interface=all, description=output_bytes   | counter            |   106500            |  221650       | 0                  | 1                        |
+      | metric_name            | label_values                               | metric_type        |   start_value       | end_value     | start_spike_minute | spike_duration_minutes   |
+      | interface              | interface=all, description=input_bytes     | counter            |   106500            |  221650       | 0                  | 1                        |
+      | interface              | interface=all, description=output_bytes    | counter            |   106500            |  221650       | 0                  | 1                        |
+      | interface              | interface=all, description=input_packets   | counter            |   106500            |  221650       | 0                  | 1                        |
+      | interface              | interface=all, description=output_packets  | counter            |   106500            |  221650       | 0                  | 1                        |
     Then verify if an THROUGHPUT_ANOMALY insight with state RESOLVED is created with a timeout of 10 minute(s)
 
   Scenario: Connection stats anomaly with intermittent spikes
