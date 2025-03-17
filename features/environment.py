@@ -115,6 +115,36 @@ def is_ra_vpn_enabled(ra_vpn_enabled_devices, device_record_uid):
     return False
 
 
+def before_feature(context, feature):
+    if feature.name == "Testing RA-VPN forecasting":
+        print("Updating RA-VPN forecasting module settings")
+        module_settings = {
+            "moduleName": "RAVPN_MAX_SESSIONS_BREACH_FORECAST",
+            "enable": True,
+            "severity": "AUTO",
+            "forecastDurationInDays": 90,
+            "maxSessionsThreshold": 100.0,
+            "accuracyLevel": "MEDIUM",
+            "minimumTrainingPeriodInDays": 7,
+            "historyDurationInDays": 14,
+        }
+        update_module_settings("ravpn-capacity-forecast", module_settings)
+    elif feature.name == "Testing Anomaly Detection":
+        print("Updating Anomaly Detection module settings")
+        module_settings = {
+            "moduleName": "THROUGHPUT_ANOMALY",
+            "enable": True,
+            "severity": "WARNING",
+            "sensitivityLevel": "HIGH",
+            "sensitivityPercentage": 10.0,
+            "historyDurationInDays": 14,
+            "anomalyDurationInMinutes": 5,
+        }
+        update_module_settings("throughput-anomaly", module_settings)
+        module_settings["moduleName"] = "CONNECTIONS_ANOMALY"
+        update_module_settings("connections-anomaly", module_settings)
+
+
 def before_scenario(context, scenario):
     if context.stop_execution:
         scenario.skip("Skipping scenario due to a previous failure.")
@@ -143,3 +173,7 @@ def get_gcm_remote_write_config():
         "username": gcm_stack_config["hmInstancePromId"],
         "password": gcm_stack_config["prometheusToken"],
     }
+
+
+def update_module_settings(module, settings):
+    post(get_endpoints().MODULE_SETTINGS_ENDPOINT + f"/{module}", json.dumps(settings))

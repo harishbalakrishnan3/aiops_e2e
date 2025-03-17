@@ -52,6 +52,9 @@ class Endpoints:
         self.AI_OPS_ANOMALY_DETECTION_FORECAST_TRIGGER_URL = (
             self.BASE_URL + "/api/platform/ai-ops-anomaly-detection/v1/trigger/forecast"
         )
+        self.MODULE_SETTINGS_ENDPOINT = (
+            self.BASE_URL + "/api/platform/ai-ops-orchestrator/v1/settings/module"
+        )
 
 
 def get_endpoints():
