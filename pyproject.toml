@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "e2e"
+name = "aiops_e2e"
 version = "0.1.0"
 description = "E2E tests for AIOps"
 authors = ["Harish Balakrishnan <harishbalakrishnan3@gmail.com>"]
