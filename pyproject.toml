@@ -5,12 +5,14 @@ description = "E2E tests for AIOps"
 authors = ["Harish Balakrishnan <harishbalakrishnan3@gmail.com>"]
 readme = "README.md"
 
-[tool.black]
-line-length = 88
-target-version = ['py311']
+# Specify your package directory here if your source code is inside a folder.
+# Uncomment and edit if needed:
+# packages = [
+#     { include = "your_package_name" }
+# ]
 
 [tool.poetry.dependencies]
-python = "<3.13,>=3.9"
+python = ">=3.9,<3.13"
 PyHamcrest = "^2.1.0"
 PyYaml = "^6.0.2"
 behave = "^1.2.6"
@@ -32,12 +34,16 @@ pyjwt = "^2.9.0"
 urllib3 = "^2.2.3"
 pandas = "^2.2.2"
 jinja2 = "^3.1.4"
+
+[tool.poetry.dev-dependencies]
 black = "^25.1.0"
 pre-commit = "^4.1.0"
 notebook = "^7.3.2"
 plotly = "^6.0.0"
 
-
+[tool.black]
+line-length = 88
+target-version = ['py311']
 
 [build-system]
 requires = ["poetry-core"]
