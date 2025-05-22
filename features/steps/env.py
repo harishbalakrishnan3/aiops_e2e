@@ -55,6 +55,9 @@ class Endpoints:
         self.MODULE_SETTINGS_ENDPOINT = (
             self.BASE_URL + "/api/platform/ai-ops-orchestrator/v1/settings/module"
         )
+        self.FORECAST_DEVICE_DATA_URL = (
+            self.BASE_URL + "/api/platform/ai-ops-forecast/v1/device_data"
+        )
 
 
 def get_endpoints():

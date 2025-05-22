@@ -7,7 +7,7 @@ from mockseries.transition import LinearTransition
 from pydantic import BaseModel
 from features.model import ScenarioEnum, Device
 from features.steps.env import get_endpoints
-from features.steps.cdo_apis import get
+from features.steps.cdo_apis import get, update_device_data
 from features.steps.time_series_generator import (
     generate_timeseries,
     TimeConfig,
@@ -65,6 +65,8 @@ def get_common_labels(context, duration: timedelta):
     else:
         device = get_appropriate_device(context, duration)
         print("Selected device: ", device)
+        if context.scenario == ScenarioEnum.RAVPN_FORECAST:
+            update_device_data(device.aegis_device_uid)
         context.scenario_to_device_map[context.scenario] = device
 
     return {"tenant_uuid": context.tenant_id, "uuid": device.device_record_uid}
