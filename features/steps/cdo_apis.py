@@ -71,6 +71,12 @@ def get_onboard_status():
     return get(endpoints.TENANT_STATUS_URL, print_body=True)
 
 
+def update_device_data(device_uid):
+    print(f"Updating device data for {device_uid} to have 250 max sessions")
+    payload = {"device_uid": device_uid, "max_vpn_sessions": 250}
+    return post(endpoints.FORECAST_DEVICE_DATA_URL, json.dumps(payload), 201)
+
+
 def get(endpoint, print_body=True):
     try:
         print(f"Sending GET request to {endpoint}")
