@@ -89,22 +89,90 @@ def get_appropriate_device(context, duration) -> Device:
     """
 
     query = ""
-    available_devices = context.devices
+    # Only pickup standalone devices
+    available_devices = [
+                device
+                for device in context.devices
+                if device.container_type == None
+            ]
 
     scenario = context.scenario
     match scenario:
         case ScenarioEnum.ELEPHANTFLOW_ENHANCED | ScenarioEnum.ELEPHANTFLOW_LEGACY:
             query = 'query=efd_cpu_usage{{uuid="{uuid}"}}'
         case ScenarioEnum.CORRELATION_CPU_LINA:
-            query = 'query=cpu{{cpu=~"lina_cp_avg|lina_dp_avg" , uuid="{uuid}"}} or rate(interface{{description=~"input_bytes|input_packets" ,interface="all" , uuid="{uuid}"}}[4m]) or conn_stats{{conn_stats="connection", description="in_use",  uuid="{uuid}"}} or deployed_configuration{{deployed_configuration="number_of_ACEs"  , uuid="{uuid}"}} or sum(rate(interface{{description="drop_packets", uuid="{uuid}"}}[4m])) by (uuid , description)'
+            query = (
+                        'query=cpu{{cpu=~"lina_cp_avg|lina_dp_avg", uuid="{uuid}"}} '
+                        'or rate(interface{{description=~"input_bytes|input_packets", interface="all", uuid="{uuid}"}}[4m]) '
+                        'or conn_stats{{conn_stats="connection", description="in_use", uuid="{uuid}"}} '
+                        'or deployed_configuration{{deployed_configuration="number_of_ACEs", uuid="{uuid}"}} '
+                        'or sum(rate(interface{{description="drop_packets", uuid="{uuid}"}}[4m])) by (uuid, description)'
+                    )
         case ScenarioEnum.CORRELATION_CPU_SNORT:
-            query = 'query=cpu{{cpu=~"snort_avg|lina_cp_avg" , uuid="{uuid}"}} or rate(interface{{description=~"input_bytes|input_packets|input_avg_packet_size" ,interface="all" , uuid="{uuid}"}}[4m]) or conn_stats{{conn_stats="connection", description="in_use",  uuid="{uuid}"}} or snort{{description="denied_flow_events",snort="stats" , uuid="{uuid}"}} or snort3_perfstats{{snort3_perfstats="concurrent_elephant_flows", uuid="{uuid}"}} or rate(asp_drops{{asp_drops="snort-busy-not-fp", uuid="{uuid}"}}[4m])'
+            query = (
+                        'query=cpu{{cpu=~"snort_avg|lina_cp_avg", uuid="{uuid}"}} '
+                        'or rate(interface{{description=~"input_bytes|input_packets|input_avg_packet_size", interface="all", uuid="{uuid}"}}[4m]) '
+                        'or conn_stats{{conn_stats="connection", description="in_use", uuid="{uuid}"}} '
+                        'or snort{{description="denied_flow_events", snort="stats", uuid="{uuid}"}} '
+                        'or snort3_perfstats{{snort3_perfstats="concurrent_elephant_flows", uuid="{uuid}"}} '
+                        'or rate(asp_drops{{asp_drops="snort-busy-not-fp", uuid="{uuid}"}}[4m])'
+                    )
         case ScenarioEnum.CORRELATION_MEM_LINA:
-            query = 'query=mem{{mem="used_percentage_lina", uuid="{uuid}"}} or rate(interface{{description=~"input_bytes|input_packets" ,interface="all" , uuid="{uuid}"}}[4m]) or conn_stats{{conn_stats="connection", description="in_use",  uuid="{uuid}"}} or deployed_configuration{{deployed_configuration="number_of_ACEs"  , uuid="{uuid}"}}'
+            query = (
+                        'query=mem{{mem="used_percentage_lina", uuid="{uuid}"}} '
+                        'or rate(interface{{description=~"input_bytes|input_packets", interface="all", uuid="{uuid}"}}[4m]) '
+                        'or conn_stats{{conn_stats="connection", description="in_use", uuid="{uuid}"}} '
+                        'or deployed_configuration{{deployed_configuration="number_of_ACEs", uuid="{uuid}"}}'
+                    )
         case ScenarioEnum.CORRELATION_MEM_SNORT:
-            query = 'query=mem{{mem="used_percentage_snort", uuid="{uuid}"}} or rate(interface{{description=~"input_bytes|input_packets" ,interface="all" , uuid="{uuid}"}}[4m]) or conn_stats{{conn_stats="connection", description="in_use",  uuid="{uuid}"}}'
+            query = (
+                        'query=mem{{mem="used_percentage_snort", uuid="{uuid}"}} '
+                        'or rate(interface{{description=~"input_bytes|input_packets", interface="all", uuid="{uuid}"}}[4m]) '
+                        'or conn_stats{{conn_stats="connection", description="in_use", uuid="{uuid}"}}'
+                    )
         case ScenarioEnum.CORRELATION_MEM_SNORT:
-            query = 'query=mem{{mem="used_percentage_snort", uuid="{uuid}"}} or rate(interface{{description=~"input_bytes|input_packets" ,interface="all" , uuid="{uuid}"}}[4m]) or conn_stats{{conn_stats="connection", description="in_use",  uuid="{uuid}"}}'
+            query = (
+                        'query=mem{{mem="used_percentage_snort", uuid="{uuid}"}} '
+                        'or rate(interface{{description=~"input_bytes|input_packets", interface="all", uuid="{uuid}"}}[4m]) '
+                        'or conn_stats{{conn_stats="connection", description="in_use", uuid="{uuid}"}}'
+                    )  
+        case ScenarioEnum.CORRELATION_HA_ACTIVE:
+            available_devices = [
+                device
+                for device in context.devices
+                if device.container_type == "HA_PAIR"
+            ]
+
+            query = (
+                        'query=cpu{{cpu=~"lina_cp_avg|snort_avg|lina_dp_avg", uuid="{uuid}"}} '
+                        'or rate(interface{{description=~"input_bytes|input_packets", interface="all", uuid="{uuid}"}}[4m]) '
+                        'or conn_stats{{conn_stats="connection", description="in_use", uuid="{uuid}"}} '
+                        'or deployed_configuration{{deployed_configuration="number_of_ACEs", uuid="{uuid}"}} '
+                        'or sum(rate(interface{{description="drop_packets", uuid="{uuid}"}}[4m])) by (uuid, description) '
+                        'or snort{{description="denied_flow_events", snort="stats", uuid="{uuid}"}} '
+                        'or snort3_perfstats{{snort3_perfstats="concurrent_elephant_flows", uuid="{uuid}"}} '
+                        'or rate(asp_drops{{asp_drops="snort-busy-not-fp", uuid="{uuid}"}}[4m])'
+                        'or mem{{mem="used_percentage_lina", uuid="{uuid}"}} '
+                        'or mem{{mem="used_percentage_snort", uuid="{uuid}"}}'
+                    )
+        case ScenarioEnum.CORRELATION_CLUSTER_CONTROL:
+            available_devices = [
+                device
+                for device in context.devices
+                if device.container_type == "CLUSTER"
+            ]
+            query = (
+                        'query=cpu{{cpu=~"lina_cp_avg|snort_avg|lina_dp_avg", uuid="{uuid}"}} '
+                        'or rate(interface{{description=~"input_bytes|input_packets", interface="all", uuid="{uuid}"}}[4m]) '
+                        'or conn_stats{{conn_stats="connection", description="in_use", uuid="{uuid}"}} '
+                        'or deployed_configuration{{deployed_configuration="number_of_ACEs", uuid="{uuid}"}} '
+                        'or sum(rate(interface{{description="drop_packets", uuid="{uuid}"}}[4m])) by (uuid, description) '
+                        'or snort{{description="denied_flow_events", snort="stats", uuid="{uuid}"}} '
+                        'or snort3_perfstats{{snort3_perfstats="concurrent_elephant_flows", uuid="{uuid}"}} '
+                        'or rate(asp_drops{{asp_drops="snort-busy-not-fp", uuid="{uuid}"}}[4m])'
+                        'or mem{{mem="used_percentage_lina", uuid="{uuid}"}} '
+                        'or mem{{mem="used_percentage_snort", uuid="{uuid}"}}'
+                    )
         case ScenarioEnum.RAVPN_FORECAST:
             available_devices = [
                 device for device in context.devices if device.ra_vpn_enabled == True

@@ -7,6 +7,7 @@ class Device(BaseModel):
     aegis_device_uid: str
     device_record_uid: str
     ra_vpn_enabled: bool = False
+    container_type: str | None = None
 
 
 class ScenarioEnum(str, Enum):
@@ -19,6 +20,12 @@ class ScenarioEnum(str, Enum):
     )
     CORRELATION_CPU_SNORT = (
         "Push data and test correlation alerts for CPU_SNORT_THRESHOLD_BREACH"
+    )
+    CORRELATION_HA_ACTIVE = (
+        "Push data and test multi correlation alerts for HA active device"
+    )
+    CORRELATION_CLUSTER_CONTROL = (
+        "Push data and test multi correlation alerts for CLUSTER control device"
     )
     CORRELATION_MEM_LINA = (
         "Push data and test correlation alerts for MEMORY_LINA_THRESHOLD_BREACH"
