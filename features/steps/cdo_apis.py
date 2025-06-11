@@ -44,10 +44,11 @@ def verify_insight_type_and_state(context, insight_type, state):
             # first find the insight object that has correct type and verify state and content of insight , This way we only print error log when the state or content fails
             if (
                 insight["state"] == state
-                and insight["primaryImpactedResources"][0]["uid"]
+                and insight["impactedResources"][0]["uid"]
                 == context.scenario_to_device_map[context.scenario].aegis_device_uid
-                and insight["primaryImpactedResources"][0]["name"]
+                and insight["impactedResources"][0]["name"]
                 == context.scenario_to_device_map[context.scenario].device_name
+                and True if context.scenario_to_device_map[context.scenario].container_type is None else "member" in insight["impactedResources"][0]
             ):
                 context.matched_insight = insight
                 return True
