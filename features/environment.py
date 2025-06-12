@@ -74,7 +74,9 @@ def update_device_details(context):
 
     available_devices = []  # List of all the available devices
     ra_vpn_devices = []  # List of only the devices with RA-VPN enabled
-    device_details = get(get_endpoints().DEVICES_DETAILS_URL + "&limit=200", print_body=False)
+    device_details = get(
+        get_endpoints().DEVICES_DETAILS_URL + "&limit=200", print_body=False
+    )
     for device in device_details:
         device_obj = Device(
             device_name=device["name"],

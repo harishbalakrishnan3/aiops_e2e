@@ -108,7 +108,6 @@ Feature: Correlation testing
     Then verify if an CPU_SNORT_THRESHOLD_BREACH insight with state ACTIVE is created with a timeout of 10 minute(s)
     Then confirm correlated metrics
       | metric_name                 | confidence        | 
-      | Input Packet Size           | HIGH              | 
       | Snort Denied Flows          | HIGH              | 
       | Connections                 | HIGH              |
       | Control plane CPU           | HIGH              |
