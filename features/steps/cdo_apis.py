@@ -48,7 +48,10 @@ def verify_insight_type_and_state(context, insight_type, state):
                 == context.scenario_to_device_map[context.scenario].aegis_device_uid
                 and insight["impactedResources"][0]["name"]
                 == context.scenario_to_device_map[context.scenario].device_name
-                and True if context.scenario_to_device_map[context.scenario].container_type is None else "member" in insight["impactedResources"][0]
+                and True
+                if context.scenario_to_device_map[context.scenario].container_type
+                is None
+                else "member" in insight["impactedResources"][0]
             ):
                 context.matched_insight = insight
                 return True
