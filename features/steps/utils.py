@@ -301,6 +301,7 @@ def start_polling(query: str, retry_count: int, retry_frequency_seconds: int) ->
 
     count = 0
     success = False
+    print(f"Polling data store with PromQL: {query}")
     while True:
         # Exit after 60 minutes
         if count > retry_count:
@@ -314,8 +315,11 @@ def start_polling(query: str, retry_count: int, retry_frequency_seconds: int) ->
         if len(response["data"]["result"]) > 0:
             num_data_points = len(response["data"]["result"][0]["values"])
             print(f"Active data points: {num_data_points}.")
-            if num_data_points > 3700:
+            if num_data_points > 3900:
                 success = True
+                print(
+                    f"Total time taken to ingest data: {count * retry_frequency_seconds/60} minutes"
+                )
                 break
 
         time.sleep(retry_frequency_seconds)
