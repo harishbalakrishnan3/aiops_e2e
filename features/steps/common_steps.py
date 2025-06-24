@@ -229,6 +229,7 @@ def step_impl(context, scenario, duration):
     context.generated_data_list.extend(generated_data_list)
 
 
+# TODO: Check if this step is required
 @step("start backfill")
 def step_impl(context):
     backfill_generated_data(context, context.generated_data_list)
@@ -240,14 +241,14 @@ def step_impl(context, duration):
     duration_delta = timedelta(hours=int(duration))
     generated_data_list = generate_data_for_input(context, duration_delta)
     backfill_generated_data(context, generated_data_list)
-    assert check_if_backfilled_data_present(context.generated_data_list)
+    assert check_if_backfilled_data_present(generated_data_list)
 
 
 def check_if_backfilled_data_present(generated_data_list: List[GeneratedData]):
     for generated_data in generated_data_list:
         start = generated_data.values["ds"].iloc[0]
         end = generated_data.values["ds"].iloc[-1]
-        duration_hours = (end - start) / 60
+        duration_hours = (end - start) / 3600
 
         if not check_if_data_present(
             generated_data.metric_name,
