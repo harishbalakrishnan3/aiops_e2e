@@ -34,6 +34,7 @@ cd utils
 sh ./download_prometheus.sh
 sh ./download_mimirtool.sh
 ```
+3. Getting a helios token -> https://cisco.sharepoint.com/sites/HeliosAI/SitePages/How-to-use-Api-key-to-call-Helios-Api.aspx
 
 ### Running Behave Tests
 
