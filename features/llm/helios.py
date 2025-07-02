@@ -12,8 +12,6 @@ logger = logging.getLogger(__name__)
 headers = {"Authorization": f"Bearer {os.getenv('HELIOS_TOKEN')}"}
 
 
-#  KNOWLEDGE BASE ID : 212
-#  ASSISTANT ID : 206
 def create_knowledge_base():
     payload = {
         "name": "firewall",  # e.g, "test-kb"
@@ -53,7 +51,6 @@ def link_assistant_with_kb(assistant_id: int, kb_id: int):
     ).json()
 
 
-# [{'id': 8714, 'type': 'file', 'created_at': '2025-03-17T18:26:05.165383', 'status': 'active', 'filename': 'health-monitoring.pdf', 'access': 'public', 'bytes': 51491, 'synced_at': None, 'metadata': {'file_name': 'health-monitoring.pdf', 'file_ext': '.pdf', 'base_dir': '/tmp', 'file_path': 'knowledge_bases/212/health-monitoring.pdf', 'access': 'public', 'kb:212': True, 'knowledge_base.id': 212, 'knowledge_base.type': 'COLLECTION', 'knowledge_base.subtype': 'SELF_MANAGED', 'knowledge_base.share_reference': True, 'node_count': 36}}, {'id': 8715, 'type': 'file', 'created_at': '2025-03-17T18:26:05.165383', 'status': 'active', 'filename': 'elephant-flow-detection.pdf', 'access': 'public', 'bytes': 7372, 'synced_at': None, 'metadata': {'file_name': 'elephant-flow-detection.pdf', 'file_ext': '.pdf', 'base_dir': '/tmp', 'file_path': 'knowledge_bases/212/elephant-flow-detection.pdf', 'access': 'public', 'kb:212': True, 'knowledge_base.id': 212, 'knowledge_base.type': 'COLLECTION', 'knowledge_base.subtype': 'SELF_MANAGED', 'knowledge_base.share_reference': True, 'node_count': 6}}, {'id': 8716, 'type': 'file', 'created_at': '2025-03-17T18:26:05.165383', 'status': 'active', 'filename': 'elephant_flow.pdf', 'access': 'public', 'bytes': 6082, 'synced_at': None, 'metadata': {'file_name': 'elephant_flow.pdf', 'file_ext': '.pdf', 'base_dir': '/tmp', 'file_path': 'knowledge_bases/212/elephant_flow.pdf', 'access': 'public', 'kb:212': True, 'knowledge_base.id': 212, 'knowledge_base.type': 'COLLECTION', 'knowledge_base.subtype': 'SELF_MANAGED', 'knowledge_base.share_reference': True, 'node_count': 5}}]
 def ingest_files(kb_id: str, context_dir: str):
     pdf_folder = context_dir
     file_paths = []
