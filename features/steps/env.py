@@ -13,6 +13,9 @@ class Path:
     PYTHON_UTILS_ROOT = os.path.join(PROJECT_ROOT, "utils")
 
 
+HELIOS_ASSISTANT_ID = 343
+
+
 class Endpoints:
     def __init__(self):
         load_dotenv()
@@ -55,6 +58,13 @@ class Endpoints:
         self.MODULE_SETTINGS_ENDPOINT = (
             self.BASE_URL + "/api/platform/ai-ops-orchestrator/v1/settings/module"
         )
+        self.HELIOS_ASSISTANT = (
+            "https://helios-ai-api-stage-gw.cisco.com/api/assistants"
+        )
+        self.HELIOS_KNOWLEDGE_BASE = (
+            "https://helios-ai-api-stage-gw.cisco.com/api/knowledge_bases"
+        )
+        self.HELIOS_THREADS = "https://helios-ai-api-stage-gw.cisco.com/api/threads"
         self.FORECAST_DEVICE_DATA_URL = (
             self.BASE_URL + "/api/platform/ai-ops-forecast/v1/device_data"
         )
