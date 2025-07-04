@@ -3,7 +3,11 @@ import time
 from behave import *
 from hamcrest import assert_that
 
-from features.steps.cdo_apis import post_onboard_action, post_offboard_action, get_onboard_status
+from features.steps.cdo_apis import (
+    post_onboard_action,
+    post_offboard_action,
+    get_onboard_status,
+)
 
 
 @step("perform a tenant {action}")

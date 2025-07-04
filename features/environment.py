@@ -24,7 +24,6 @@ def before_all(context):
     load_dotenv()
     cdo_token = os.getenv("CDO_TOKEN")
     os.environ["CDO_TOKEN"] = cdo_token
-
     # Adding the tenant_id to the context
     if cdo_token != "" and cdo_token is not None:
         decoded = jwt.decode(cdo_token, options={"verify_signature": False})
@@ -75,12 +74,15 @@ def update_device_details(context):
 
     available_devices = []  # List of all the available devices
     ra_vpn_devices = []  # List of only the devices with RA-VPN enabled
-    device_details = get(get_endpoints().DEVICES_DETAILS_URL, print_body=False)
+    device_details = get(
+        get_endpoints().DEVICES_DETAILS_URL + "&limit=200", print_body=False
+    )
     for device in device_details:
         device_obj = Device(
             device_name=device["name"],
             aegis_device_uid=device["uid"],
             device_record_uid=device["metadata"]["deviceRecordUuid"],
+            container_type=device["metadata"]["containerType"],
         )
         ra_vpn_enabled = False
         if is_ra_vpn_enabled(
@@ -90,7 +92,6 @@ def update_device_details(context):
             ra_vpn_devices.append(device_obj)
         device_obj.ra_vpn_enabled = ra_vpn_enabled
         available_devices.append(device_obj)
-
     context.devices = available_devices
 
     print(
