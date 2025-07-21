@@ -14,10 +14,7 @@ endpoints = get_endpoints()
 
 
 def get_insights():
-    url = (
-        endpoints.INSIGHTS_URL
-        + "?fields=insightType,impactedResources.name,insightState"
-    )
+    url = endpoints.INSIGHTS_URL + "?fields=insightType,impactedResources,insightState"
     return get(url, print_body=False)
 
 
