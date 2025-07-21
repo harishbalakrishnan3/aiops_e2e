@@ -65,7 +65,7 @@ def ingest_files(kb_id: str, context_dir: str):
         headers=headers,
         files=files,
     ).json()
-    print(response)
+    logging.info(response)
 
 
 def create_thread():

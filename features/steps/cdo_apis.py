@@ -1,5 +1,6 @@
 import json
 import os
+import logging
 from datetime import datetime
 import requests
 from opentelemetry.exporter.prometheus_remote_write import (
@@ -30,10 +31,12 @@ def remote_write(metrics_data: MetricsData):
 
     result = exporter.export(metrics_data)
     if result == MetricExportResult.FAILURE:
-        print(f"Failed to export metric data")
+        logging.error("Failed to export metric data")
         raise Exception("Failed to export metric data")
     else:
-        print(f"Exported metrics at {datetime.now().strftime('%d-%m-%Y %H:%M:%S')}")
+        logging.info(
+            f"Exported metrics at {datetime.now().strftime('%d-%m-%Y %H:%M:%S')}"
+        )
 
 
 def verify_insight_type_and_state(context, insight_type, state):
@@ -42,7 +45,7 @@ def verify_insight_type_and_state(context, insight_type, state):
         return False
     for insight in insights["items"]:
         if insight["type"] == insight_type:
-            # first find the insight object that has correct type and verify state and content of insight , This way we only print error log when the state or content fails
+            # first find the insight object that has correct type and verify state and content of insight , This way we only log error when the state or content fails
             if (
                 insight["state"] == state
                 and insight["impactedResources"][0]["uid"]
@@ -57,9 +60,16 @@ def verify_insight_type_and_state(context, insight_type, state):
                 context.matched_insight = insight
                 return True
             else:
-                print(
-                    f"One or more checks failed for the insight \n. Expected insight type: {insight_type} \n. Expected insight state: {state} \n. Expected device name: {context.scenario_to_device_map[context.scenario].device_name} \n. Expected device id: {context.scenario_to_device_map[context.scenario].aegis_device_uid} \n\n Actual Insight : {insights}"
+                logging.error("One or more checks failed for the insight")
+                logging.error(f"Expected insight type: {insight_type}")
+                logging.error(f"Expected insight state: {state}")
+                logging.error(
+                    f"Expected device name: {context.scenario_to_device_map[context.scenario].device_name}"
                 )
+                logging.error(
+                    f"Expected device id: {context.scenario_to_device_map[context.scenario].aegis_device_uid}"
+                )
+                logging.error(f"Actual Insight: {insights}")
     return False
 
 
@@ -77,14 +87,14 @@ def get_onboard_status():
 
 
 def update_device_data(device_uid):
-    print(f"Updating device data for {device_uid} to have 250 max sessions")
+    logging.info(f"Updating device data for {device_uid} to have 250 max sessions")
     payload = {"device_uid": device_uid, "max_vpn_sessions": 250}
     return post(endpoints.FORECAST_DEVICE_DATA_URL, json.dumps(payload), 201)
 
 
 def get(endpoint, print_body=True):
     try:
-        print(f"Sending GET request to {endpoint}")
+        logging.info(f"Sending GET request to {endpoint}")
         retry = Retry(
             total=3,
             backoff_factor=2,
@@ -103,19 +113,21 @@ def get(endpoint, print_body=True):
         )
         response_payload = response.json()
         if print_body:
-            print("Response: ", response_payload)
+            logging.info(
+                f"Response status: {response.status_code}, Response: {response_payload}"
+            )
         assert (
             response.status_code == 200
         ), f"GET request to {endpoint} failed with status code {response.status_code}"
         return response_payload
     except Exception as e:
-        print(f"Failed to send GET request to {endpoint}")
+        logging.error(f"Failed to send GET request to {endpoint}: {str(e)}")
         raise e
 
 
 def post(endpoint, payload=None, expected_return_code=200):
     try:
-        print(f"Sending POST request to {endpoint} with payload {payload}")
+        logging.info(f"Sending POST request to {endpoint} with payload {payload}")
         retry = Retry(
             total=3,
             backoff_factor=2,
@@ -133,19 +145,23 @@ def post(endpoint, payload=None, expected_return_code=200):
             },
             timeout=180,
         )
-        print("Response: ", response)
+        logging.info(
+            f"Response status: {response.status_code}, Response: {response.text}"
+        )
         assert (
             response.status_code == expected_return_code
         ), f"POST request to {endpoint} failed with status code {response.status_code}"
         return response
     except Exception as e:
-        print(f"Failed to send POST request to {endpoint} with payload {payload}")
+        logging.error(
+            f"Failed to send POST request to {endpoint} with payload {payload}: {str(e)}"
+        )
         raise e
 
 
 def delete(endpoint, expected_return_code=200):
     try:
-        print(f"Sending DELETE request to {endpoint}")
+        logging.info(f"Sending DELETE request to {endpoint}")
         retry = Retry(
             total=3,
             backoff_factor=2,
@@ -159,10 +175,12 @@ def delete(endpoint, expected_return_code=200):
             headers={"Authorization": "Bearer " + os.getenv("CDO_TOKEN")},
             timeout=180,
         )
-        print("Response: ", response)
+        logging.info(
+            f"Response status: {response.status_code}, Response: {response.text}"
+        )
         assert (
             response.status_code == expected_return_code
         ), f"DELETE request to {endpoint} failed with status code {response.status_code}"
     except Exception as e:
-        print(f"Failed to send DELETE request to {endpoint}")
+        logging.error(f"Failed to send DELETE request to {endpoint}: {str(e)}")
         raise e

@@ -1,4 +1,5 @@
 import json
+import logging
 import os.path
 import subprocess
 import time
@@ -30,7 +31,7 @@ HISTORICAL_DATA_FILE = "ravpn_historical_data.txt"
 @step("backfill RAVPN metrics for a suitable device")
 def step_impl(context):
     if context.remote_write_config is None:
-        print("Remote write config not found. Skipping backfill.")
+        logging.info("Remote write config not found. Skipping backfill.")
         assert False
 
     # TODO : Remove post checking backfill behaviour for RA-VPN
@@ -79,7 +80,7 @@ def step_impl(context):
         ],
     )
     end_time = time.time()
-    print(f"Backfill took {(end_time - start_time)/60:.2f} minutes")
+    logging.info(f"Backfill took {(end_time - start_time)/60:.2f} minutes")
 
     # Calculate the start and end times
     start_time = datetime.now() - timedelta(days=14)
@@ -98,7 +99,7 @@ def step_impl(context):
     while True:
         # Exit after 60 minutes
         if count > 60:
-            print("Data not ingested in Prometheus. Exiting.")
+            logging.info("Data not ingested in Prometheus. Exiting.")
             break
 
         count += 1
@@ -110,7 +111,7 @@ def step_impl(context):
             num_data_points_inactive_ravpn = len(
                 response["data"]["result"][1]["values"]
             )
-            print(
+            logging.info(
                 f"Active RAVPN data points: {num_data_points_active_ravpn}. Inactive RAVPN data points: {num_data_points_inactive_ravpn}"
             )
             if (
@@ -154,7 +155,9 @@ def is_device_present_with_ra_vpn_data(context):
             query.format(uuid=device.device_record_uid), timedelta(days=365), "60m"
         ):
             context.scenario_to_device_map[context.scenario] = device
-            print("Device with RA-VPN data already present , Selected device: ", device)
+            logging.info(
+                "Device with RA-VPN data already present , Selected device: ", device
+            )
             return True
     return False
 

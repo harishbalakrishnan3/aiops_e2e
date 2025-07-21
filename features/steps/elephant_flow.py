@@ -1,6 +1,6 @@
-from features.steps.cdo_apis import get_insights
 from behave import *
 import json
+import logging
 
 
 @step("check elephant flow insight data")
@@ -9,7 +9,7 @@ def step_impl(context):
     expected_flow_data = json.loads(context.text)["flows"]
     expected_length = len(expected_flow_data)
     if len(insight["data"]["flows"]) != expected_length:
-        print(
+        logging.info(
             f"Expected {expected_length} flow but got {len(insight['data']['flows'])}"
         )
         assert False
@@ -20,5 +20,5 @@ def step_impl(context):
         del flow["stats"]
 
     if flows != expected_flow_data:
-        print(f"Expected flow data {expected_flow_data} but got {flow}")
+        logging.error(f"Expected flow data {expected_flow_data} but got {flows}")
         assert False

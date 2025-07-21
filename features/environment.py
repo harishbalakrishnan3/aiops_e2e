@@ -1,5 +1,8 @@
 import json
 import os
+import logging
+import sys
+from datetime import datetime, timezone
 
 import jwt
 from behave.model_core import Status
@@ -13,9 +16,47 @@ from features.model import Device, ScenarioEnum
 timeseries = {}
 
 
+class UTCFormatter(logging.Formatter):
+    """Custom formatter that uses UTC timestamps in ISO 8601 format"""
+
+    def formatTime(self, record, datefmt=None):
+        dt = datetime.fromtimestamp(record.created, tz=timezone.utc)
+        # ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ
+        return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def setup_logging():
+    """Configure logging with ISO 8601 UTC timestamps"""
+    # Create root logger
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
+    # Remove any existing handlers
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
+
+    # Create console handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.DEBUG)
+
+    # Create formatter with ISO 8601 UTC timestamps (no module names)
+    formatter = UTCFormatter(fmt="[%(asctime)s] [%(levelname)s] %(message)s")
+    console_handler.setFormatter(formatter)
+
+    # Add handler to logger
+    logger.addHandler(console_handler)
+
+    # Set specific loggers to appropriate levels
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("requests").setLevel(logging.WARNING)
+
+
 def before_all(context):
-    # Initialize logging
+    # Setup behave's logging
     context.config.setup_logging()
+
+    # Initialize logging with ISO 8601 UTC timestamps
+    setup_logging()
 
     # Creating an empty timeseries dictionary - this will be populated in the due course of test execution
     context.timeseries = timeseries
@@ -69,7 +110,7 @@ def update_device_details(context):
         },
     }
     resp = post(get_endpoints().DEVICE_GATEWAY_COMMAND_URL, json.dumps(req))
-    print(resp.json())
+    logging.info(resp.json())
     ra_vpn_enabled_devices = json.loads(resp.json()["data"]["responseBody"])
 
     available_devices = []  # List of all the available devices
@@ -94,10 +135,10 @@ def update_device_details(context):
         available_devices.append(device_obj)
     context.devices = available_devices
 
-    print(
+    logging.info(
         f"There are {len(available_devices)} devices available with {len(ra_vpn_devices)} devices having RA-VPN enabled"
     )
-    print(
+    logging.info(
         f"Devices with RA-VPN enabled: {[device.device_name for device in ra_vpn_devices]}"
     )
 
@@ -118,7 +159,7 @@ def is_ra_vpn_enabled(ra_vpn_enabled_devices, device_record_uid):
 
 def before_feature(context, feature):
     if feature.name == "Testing RA-VPN forecasting":
-        print("Updating RA-VPN forecasting module settings")
+        logging.info("Updating RA-VPN forecasting module settings")
         module_settings = {
             "moduleName": "RAVPN_MAX_SESSIONS_BREACH_FORECAST",
             "enable": True,
@@ -131,7 +172,7 @@ def before_feature(context, feature):
         }
         update_module_settings("ravpn-capacity-forecast", module_settings)
     elif feature.name == "Testing Anomaly Detection":
-        print("Updating Anomaly Detection module settings")
+        logging.info("Updating Anomaly Detection module settings")
         module_settings = {
             "moduleName": "THROUGHPUT_ANOMALY",
             "enable": True,
@@ -162,9 +203,9 @@ def after_scenario(context, scenario):
 
 
 def after_all(context):
-    print("Selected device for each scenario is as follows")
+    logging.info("Selected device for each scenario is as follows")
     for scenario, device in context.scenario_to_device_map.items():
-        print(f"{scenario}: {device}")
+        logging.info(f"{scenario}: {device}")
 
 
 def get_gcm_remote_write_config():

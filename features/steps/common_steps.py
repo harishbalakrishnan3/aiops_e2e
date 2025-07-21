@@ -3,14 +3,13 @@ import os
 import subprocess
 import time
 from typing import List
+import logging
 
 from behave import *
 from hamcrest import assert_that
 from jinja2 import Template
 
-from features.model import Device
 from features.steps.utils import (
-    BackfillData,
     check_if_data_present,
     convert_to_backfill_data,
 )
@@ -138,7 +137,9 @@ def step_impl(context, duration, live_duration):
 
     # Live data generation
     live_ingest_datapoints_count = len(synthesized_ts_list_for_live_fill[0].values)
-    print(f"Pushing {live_ingest_datapoints_count} datapoints through live ingestion ")
+    logging.info(
+        f"Pushing {live_ingest_datapoints_count} datapoints through live ingestion "
+    )
     for i in range(live_ingest_datapoints_count):
         data_for_current_instant = []
         for value_dict in synthesized_ts_list_for_live_fill:
@@ -296,7 +297,7 @@ def backfill_generated_data(context, generated_data_list: List[GeneratedData]):
 
 def generate_data_for_input(context, duration_delta: timedelta) -> List[GeneratedData]:
     if context.remote_write_config is None:
-        print("Remote write config not found. Skipping backfill.")
+        logging.info("Remote write config not found. Skipping backfill.")
         assert False
 
     generated_data_list: List[GeneratedData] = []

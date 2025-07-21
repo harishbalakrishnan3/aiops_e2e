@@ -1,6 +1,7 @@
 import copy
 from datetime import timedelta, datetime
 import time
+import logging
 from typing import List
 import pandas as pd
 from mockseries.transition import LinearTransition
@@ -44,7 +45,7 @@ def store_ts_in_context(context, labels, key, metric_name):
     if metric_name not in context.timeseries.keys():
         context.timeseries[metric_name] = {}
     context.timeseries[metric_name][key] = ts
-    print(f"Timeseries in context: {context.timeseries}")
+    logging.info(f"Timeseries in context: {context.timeseries}")
 
 
 def get_label_map(context, label_string: str, duration: timedelta):
@@ -64,7 +65,7 @@ def get_common_labels(context, duration: timedelta):
         device = context.scenario_to_device_map[context.scenario]
     else:
         device = get_appropriate_device(context, duration)
-        print("Selected device: ", device)
+        logging.info("Selected device: ", device)
         if context.scenario == ScenarioEnum.RAVPN_FORECAST:
             update_device_data(device.aegis_device_uid)
         context.scenario_to_device_map[context.scenario] = device
@@ -184,7 +185,9 @@ def get_appropriate_device(context, duration) -> Device:
         case ScenarioEnum.ANOMALY_THROUGHPUT:
             query = 'query=interface{{interface="all", description="input_bytes", uuid="{uuid}"}} or interface{{interface="all", description="output_bytes", uuid="{uuid}"}}'
         case _:
-            print("No matching scenarios found , picking up the last available device")
+            logging.info(
+                "No matching scenarios found , picking up the last available device"
+            )
             return context.devices[-1]
     return find_device_available_for_data_ingestion(available_devices, query, duration)
 
@@ -195,7 +198,7 @@ def find_device_available_for_data_ingestion(
     for device in available_devices:
         if not is_data_present(query.format(uuid=device.device_record_uid), duration):
             return device
-    print("No device available for ingestion , Failing test")
+    logging.info("No device available for ingestion , Failing test")
     raise ("No device available for ingestion")
 
 
@@ -209,7 +212,7 @@ def is_data_present(query: str, duration: timedelta, step="5m"):
     end_time_epoch = int(end_time.timestamp())
 
     endpoint = f"{get_endpoints().PROMETHEUS_RANGE_QUERY_URL}?{query}&start={start_time_epoch}&end={end_time_epoch}&step={step}"
-    print(endpoint)
+    logging.info(endpoint)
     response = get(endpoint, print_body=False)
     return len(response["data"]["result"]) > 0
 
@@ -301,11 +304,11 @@ def start_polling(query: str, retry_count: int, retry_frequency_seconds: int) ->
 
     count = 0
     success = False
-    print(f"Polling data store with PromQL: {query}")
+    logging.info(f"Polling data store with PromQL: {query}")
     while True:
         # Exit after 60 minutes
         if count > retry_count:
-            print("Data not ingested in Prometheus. Exiting.")
+            logging.info("Data not ingested in Prometheus. Exiting.")
             break
 
         count += 1
@@ -314,10 +317,10 @@ def start_polling(query: str, retry_count: int, retry_frequency_seconds: int) ->
         response = get(endpoint, print_body=False)
         if len(response["data"]["result"]) > 0:
             num_data_points = len(response["data"]["result"][0]["values"])
-            print(f"Active data points: {num_data_points}.")
+            logging.info(f"Active data points: {num_data_points}.")
             if num_data_points > 3900:
                 success = True
-                print(
+                logging.info(
                     f"Total time taken to ingest data: {count * retry_frequency_seconds/60} minutes"
                 )
                 break
