@@ -1,5 +1,7 @@
 .idea
 .env
+.cursor
+.windsurf
 utils/*_historical_data.txt
 utils/*_historical_data.txt
 utils/*_data/*

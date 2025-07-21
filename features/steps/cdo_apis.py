@@ -14,7 +14,11 @@ endpoints = get_endpoints()
 
 
 def get_insights():
-    return get(endpoints.INSIGHTS_URL, print_body=False)
+    url = (
+        endpoints.INSIGHTS_URL
+        + "?fields=insightType,impactedResources.name,insightState"
+    )
+    return get(url, print_body=False)
 
 
 def delete_insights():
