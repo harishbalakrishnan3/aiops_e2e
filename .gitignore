@@ -1,6 +1,7 @@
 .idea
 .env
-utils/*_historical_data.txt
+.cursor
+.windsurf
 utils/*_historical_data.txt
 utils/*_data/*
 utils/mimirtool
