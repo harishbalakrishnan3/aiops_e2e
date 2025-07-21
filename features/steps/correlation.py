@@ -1,3 +1,4 @@
+import logging
 from behave import *
 
 
@@ -15,7 +16,7 @@ def step_impl(context):
                 if correlationMetric["correlationRank"] == confidence:
                     return True
 
-        print(
+        logging.error(
             f"Expected correlation metric {metric_name} with confidence {confidence} not found"
         )
         assert False

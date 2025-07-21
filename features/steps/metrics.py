@@ -1,5 +1,5 @@
 import time
-from typing import Any, Dict
+import logging
 from datetime import timedelta
 from behave import *
 from opentelemetry import metrics
@@ -31,7 +31,7 @@ def create_gauge(name: str, description: str):
         name=name,
         description=description,
     )
-    print(f"Created gauge {name} with description {description}")
+    logging.info(f"Created gauge {name} with description {description}")
     active_metrics[name] = gauge
 
 
@@ -89,11 +89,11 @@ def instant_remote_write(metric_name: str, labels: dict[str, str], value: float)
     try:
         remote_write(metrics_data=metrics_data)
     except Exception:
-        print(
+        logging.error(
             f"Failed to export metric {metric_name} with labels {labels} and value {value}"
         )
         return
-    print(
+    logging.info(
         f"Exported metric {metric_name} with labels {labels} and value {value} succesfully"
     )
 
