@@ -65,7 +65,12 @@ def get_common_labels(context, duration: timedelta):
         device = context.scenario_to_device_map[context.scenario]
     else:
         device = get_appropriate_device(context, duration)
-        logging.info("Selected device: ", device)
+        logging.info(
+            "Selected device: %s (aegis_uid: %s, record_uid: %s)",
+            device.device_name,
+            device.aegis_device_uid,
+            device.device_record_uid,
+        )
         if context.scenario == ScenarioEnum.RAVPN_FORECAST:
             update_device_data(device.aegis_device_uid)
         context.scenario_to_device_map[context.scenario] = device
