@@ -190,7 +190,7 @@ def get_appropriate_device(context, duration) -> Device:
         case ScenarioEnum.ANOMALY_THROUGHPUT:
             query = 'query=interface{{interface="all", description="input_bytes", uuid="{uuid}"}} or interface{{interface="all", description="output_bytes", uuid="{uuid}"}}'
         case _:
-            logging.info(
+            logging.warning(
                 "No matching scenarios found , picking up the last available device"
             )
             return context.devices[-1]
@@ -203,7 +203,7 @@ def find_device_available_for_data_ingestion(
     for device in available_devices:
         if not is_data_present(query.format(uuid=device.device_record_uid), duration):
             return device
-    logging.info("No device available for ingestion , Failing test")
+    logging.error("No device available for ingestion , Failing test")
     raise ("No device available for ingestion")
 
 
