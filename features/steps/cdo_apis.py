@@ -90,16 +90,13 @@ def verify_insight_type_and_state(context, insight_type, state):
                     context.matched_insight = insight  # fallback to partial insight
                 return True
             else:
-                logging.error("One or more checks failed for the insight")
-                logging.error(f"Expected insight type: {insight_type}")
-                logging.error(f"Expected insight state: {state}")
-                logging.error(
-                    f"Expected device name: {context.scenario_to_device_map[context.scenario].device_name}"
+                logging.info(
+                    f"Expected insight type: {insight_type} - state: {state} - device name: {context.scenario_to_device_map[context.scenario].device_name} - device id: {context.scenario_to_device_map[context.scenario].aegis_device_uid}"
                 )
-                logging.error(
-                    f"Expected device id: {context.scenario_to_device_map[context.scenario].aegis_device_uid}"
-                )
-                logging.error(f"Actual Insight: {insights}")
+                logging.info(f"Actual Insight: {insight}")
+    logging.error(
+        f"Failed to find an insight with type: {insight_type} and state: {state} for device name: {context.scenario_to_device_map[context.scenario].device_name} and device id: {context.scenario_to_device_map[context.scenario].aegis_device_uid}"
+    )
     return False
 
 
