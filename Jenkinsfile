@@ -127,6 +127,7 @@ def runStage(stage_name, command) {
         def safeStageName = stage_name.replaceAll("[^a-zA-Z0-9_-]", "_")
         
         def logFile = "${safeStageName}_output.txt"
+        def errorLogFile = "${safeStageName}_error.txt"
 
         try {
             // Pre-create the log file with permissions to prevent exceptions
@@ -145,6 +146,10 @@ def runStage(stage_name, command) {
             echo "Output of '${stage_name}':\n${output}"
             
         } catch (Exception e) {
+            // Rename the log file to *_error.txt if there is an exception
+            sh "mv ${logFile} ${errorLogFile}"
+            logFile = errorLogFile;
+            
             // This block will catch failures in the sh step itself
             failed_stages = "${failed_stages} ${stage_name} ,"
             def errorMessage = "Failed during '${stage_name}' stage: ${e.getMessage()}"
