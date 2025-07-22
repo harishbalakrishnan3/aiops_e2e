@@ -18,12 +18,6 @@ pipeline {
     }
 
     stages {
-        stage('Prepare Logs Directory') {
-            steps {
-                sh 'mkdir -p logs'
-            }
-        }
-
         stage('SCM Checkout') {
             steps {
                 script {
@@ -120,55 +114,52 @@ pipeline {
             }
         }
         always {
-            // Archive all logs
-            archiveArtifacts artifacts: 'logs/*.txt', allowEmptyArchive: true
+            script {
+                archiveArtifacts artifacts: '*_output.txt', allowEmptyArchive: true
+            }
         }
     }
 }
 
+
 def runStage(stage_name, command) {
     script {
-        // Sanitize file name
         def safeStageName = stage_name.replaceAll("[^a-zA-Z0-9_-]", "_")
-        def logFile = "logs/${safeStageName}_output.txt"
         
+        def logFile = "${safeStageName}_output.txt"
+
         try {
-            // Use a temporary file to capture both stdout and stderr
-            def tempLogFile = "${logFile}.tmp"
+            // Pre-create the log file with permissions to prevent exceptions
+            sh "touch ${logFile} && chmod 777 ${logFile}"
+
+            // Execute the command, redirecting output to the log file
+            // Note: The exit code is captured separately
+            sh(script: """
+                #!/bin/bash
+                set -e
+                ${command} > ${logFile} 2>&1
+            """)
             
-            // Run command and redirect output to temp file, then get exit status
-            def exitCode = sh(script: "${command} > ${tempLogFile} 2>&1; echo \$?", returnStdout: true).trim() as Integer
+            // Read the output from the log file to display in the console
+            def output = readFile(logFile).trim()
+            echo "Output of '${stage_name}':\n${output}"
             
-            // Read the captured output
-            def output = readFile(tempLogFile).trim()
-            
-            // Clean up temp file
-            sh "rm -f ${tempLogFile}"
-            
-            if (exitCode == 0) {
-                // Success case
-                writeFile file: logFile, text: output
-                echo "Output of '${stage_name}':\n${output}"
-            } else {
-                // Failure case - still write the output to log file
-                writeFile file: logFile, text: output
-                echo "Output of '${stage_name}' (failed with exit code ${exitCode}):\n${output}"
-                
-                // Track failed stage
-                failed_stages = "${failed_stages} ${stage_name} ,"
-                
-                // Throw error to mark stage as failed
-                error("Stage '${stage_name}' failed with exit code ${exitCode}")
-            }
         } catch (Exception e) {
-            // Fallback error handling
-            echo "Exception during '${stage_name}' stage: ${e.getMessage()}"
+            // This block will catch failures in the sh step itself
             failed_stages = "${failed_stages} ${stage_name} ,"
+            def errorMessage = "Failed during '${stage_name}' stage: ${e.getMessage()}"
             
-            def errorLog = "Exception occurred: ${e.getMessage()}"
-            writeFile file: logFile, text: errorLog
+            // Ensure we have something in the log file
+            try {
+                def existingOutput = readFile(logFile).trim()
+                if (!existingOutput) {
+                    writeFile file: logFile, text: errorMessage
+                }
+            } catch (Exception readEx) {
+                writeFile file: logFile, text: errorMessage
+            }
             
-            error("Failed during '${stage_name}' stage: ${e.getMessage()}")
+            error(errorMessage)
         }
     }
 }
