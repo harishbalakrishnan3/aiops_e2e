@@ -78,7 +78,7 @@ def step_impl(context, insight_type, insight_state, timeout):
 @step("verify no insight is present with a timeout of {timeout} minute(s)")
 def step_impl(context, timeout):
     for i in range(int(timeout)):
-        insights = get_insights()
+        insights = get_insights(fields="insightType,impactedResources,insightState")
         if insights["count"] == 0:
             assert_that(True)
             return

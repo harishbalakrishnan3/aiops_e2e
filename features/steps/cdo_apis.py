@@ -14,8 +14,26 @@ from urllib3.util import Retry
 endpoints = get_endpoints()
 
 
-def get_insights():
-    url = endpoints.INSIGHTS_URL + "?fields=insightType,impactedResources,insightState"
+def get_insights(query_params=None, fields=None):
+    url = endpoints.INSIGHTS_URL
+
+    # Build query parameters
+    params = []
+
+    # Add query parameter if specified (e.g., q=uid:xxxx-xxxxxx)
+    if query_params:
+        params.append(f"q={query_params}")
+
+    # Add fields parameter if specified (e.g., fields=insightType,impactedResources,insightState)
+    if fields:
+        params.append(f"fields={fields}")
+
+    # Note: If no fields specified, fetch entire insights without field restrictions
+
+    # Construct final URL with parameters
+    if params:
+        url += "?" + "&".join(params)
+
     return get(url, print_body=False)
 
 
@@ -40,7 +58,8 @@ def remote_write(metrics_data: MetricsData):
 
 
 def verify_insight_type_and_state(context, insight_type, state):
-    insights = get_insights()
+    # Use field projections to get only the fields we need for initial filtering (including uid for later query)
+    insights = get_insights(fields="insightType,impactedResources,insightState,uid")
     if insights["count"] == 0:
         return False
     for insight in insights["items"]:
@@ -57,7 +76,18 @@ def verify_insight_type_and_state(context, insight_type, state):
                 is None
                 else "member" in insight["impactedResources"][0]
             ):
-                context.matched_insight = insight
+                # Fetch the complete insight object using its uid
+                insight_uid = insight["uid"]
+                complete_insight_response = get_insights(
+                    query_params=f"uid:{insight_uid}"
+                )
+                if complete_insight_response["count"] > 0:
+                    context.matched_insight = complete_insight_response["items"][0]
+                else:
+                    logging.error(
+                        f"Failed to fetch complete insight for uid: {insight_uid}"
+                    )
+                    context.matched_insight = insight  # fallback to partial insight
                 return True
             else:
                 logging.error("One or more checks failed for the insight")
