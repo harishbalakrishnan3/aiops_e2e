@@ -1,6 +1,6 @@
 from langchain_aws import ChatBedrockConverse
 from langgraph.prebuilt import create_react_agent
-from .tools import get_logs , transfer_to_validation_issue_analyzer
+from .tools import get_logs, transfer_to_validation_issue_analyzer
 
 agent_prompt = """
 You are a log analysis agent that diagnoses system issues efficiently. Your goal is to find root causes while minimizing token usage.
@@ -32,16 +32,17 @@ Do not include anything besides the output format
 After your analysis If the problem pertains to validation failure , assertion failure or verification failure or issues along these lines , transfer the task to the validation_issue_analyzer.Do not transfer anything related to test setup , ingestion 
 """
 
+
 def get_jenkins_agent():
     llm = ChatBedrockConverse(
-                model="anthropic.claude-3-5-haiku-20241022-v1:0",
-                # model="anthropic.claude-3-5-sonnet-20241022-v2:0",
-                temperature=0,
-                max_tokens=None,
-        )
+        model="anthropic.claude-3-5-haiku-20241022-v1:0",
+        # model="anthropic.claude-3-5-sonnet-20241022-v2:0",
+        temperature=0,
+        max_tokens=None,
+    )
 
     return create_react_agent(
-    model=llm,  
-    tools=[get_logs , transfer_to_validation_issue_analyzer],  
-    prompt=agent_prompt,
-)
+        model=llm,
+        tools=[get_logs, transfer_to_validation_issue_analyzer],
+        prompt=agent_prompt,
+    )
