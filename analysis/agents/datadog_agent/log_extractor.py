@@ -171,9 +171,23 @@ def retrieve_logs(
                         log_dict["message"] = log.attributes.message
 
                     # Add additional attributes
-                    for attr in ["service", "env", "source"]:
-                        if hasattr(log.attributes, attr):
-                            log_dict[attr] = getattr(log.attributes, attr)
+
+                    if hasattr(log.attributes, "service"):
+                        log_dict["service"] = log.attributes.service
+
+                    # Add device-related fields if they exist
+                    device_fields = [
+                        "device_uid",
+                        "device_uids",
+                        "device_record_uids",
+                        "device_record_uid",
+                        "synchronization_uid",
+                        "module_name",
+                    ]
+                    for field in device_fields:
+                        if field in log.attributes.attributes:
+                            field_value = log.attributes.attributes[field]
+                            log_dict[field] = field_value
 
                     logs_data.append(log_dict)
 

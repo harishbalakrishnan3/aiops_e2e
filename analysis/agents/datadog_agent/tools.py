@@ -1,7 +1,7 @@
 from typing import List, Union
 from datetime import datetime, timezone, timedelta
 from langchain_core.tools import tool
-from .log_extractor import retrieve_logs
+from log_extractor import retrieve_logs
 import json
 
 
