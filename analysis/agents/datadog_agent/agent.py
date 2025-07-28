@@ -27,12 +27,8 @@ def get_datadog_agent():
 
     User Prompt: {user_prompt}
     """
-    # TODO : Merge hwchase17/react with custom prompt 
-    return create_react_agent(
-        model=llm,  
-        tools=get_tools(),  
-        prompt=template)
-
+    # TODO : Merge hwchase17/react with custom prompt
+    return create_react_agent(model=llm, tools=get_tools(), prompt=template)
 
 
 def lookup():
