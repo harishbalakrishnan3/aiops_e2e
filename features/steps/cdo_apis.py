@@ -90,10 +90,10 @@ def verify_insight_type_and_state(context, insight_type, state):
                     context.matched_insight = insight  # fallback to partial insight
                 return True
             else:
-                logging.info(
+                logging.debug(
                     f"Expected insight type: {insight_type} - state: {state} - device name: {context.scenario_to_device_map[context.scenario].device_name} - device id: {context.scenario_to_device_map[context.scenario].aegis_device_uid}"
                 )
-                logging.info(f"Actual Insight: {insight}")
+                logging.debug(f"Actual Insight: {insight}")
     logging.error(
         f"Failed to find an insight with type: {insight_type} and state: {state} for device name: {context.scenario_to_device_map[context.scenario].device_name} and device id: {context.scenario_to_device_map[context.scenario].aegis_device_uid}"
     )
@@ -121,7 +121,7 @@ def update_device_data(device_uid):
 
 def get(endpoint, print_body=True):
     try:
-        logging.info(f"Sending GET request to {endpoint}")
+        logging.debug(f"Sending GET request to {endpoint}")
         retry = Retry(
             total=3,
             backoff_factor=2,

@@ -313,7 +313,7 @@ def start_polling(query: str, retry_count: int, retry_frequency_seconds: int) ->
     while True:
         # Exit after 60 minutes
         if count > retry_count:
-            logging.info("Data not ingested in Prometheus. Exiting.")
+            logging.error("Data not ingested in Prometheus. Exiting.")
             break
 
         count += 1
@@ -322,7 +322,7 @@ def start_polling(query: str, retry_count: int, retry_frequency_seconds: int) ->
         response = get(endpoint, print_body=False)
         if len(response["data"]["result"]) > 0:
             num_data_points = len(response["data"]["result"][0]["values"])
-            logging.info(f"Active data points: {num_data_points}.")
+            logging.debug(f"Active data points: {num_data_points}.")
             if num_data_points > 3900:
                 success = True
                 logging.info(
