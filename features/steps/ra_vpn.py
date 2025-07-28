@@ -99,7 +99,7 @@ def step_impl(context):
     while True:
         # Exit after 60 minutes
         if count > 60:
-            logging.info("Data not ingested in Prometheus. Exiting.")
+            logging.error("Data not ingested in Prometheus. Exiting.")
             break
 
         count += 1
