@@ -13,7 +13,7 @@ import json
 # Load environment variables
 load_dotenv()
 
-DEFAULT_FILTERS = """service:(ai-ops-orchestrator OR ai-ops-analytics OR ai-ops-forecast OR ai-ops-metrics-generator OR ai-ops-anomaly-detection OR ai-ops-correlation OR ai-ops-insights)
+DEFAULT_FILTERS = """service:{microservices}
 env:staging
 status:{log_level}
 -"New scheduling"
@@ -23,21 +23,57 @@ status:{log_level}
 """
 
 
+def get_microservices_text(feature_name: str) -> str:
+    """
+    Read microservices text from the appropriate feature folder under domain knowledge.
+
+    Args:
+        feature_name: Name of the feature folder (e.g., "100_ElephantFlows")
+
+    Returns:
+        Content of microservices.txt file, or default if not found
+    """
+    try:
+        # Get the directory of the current script
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        microservices_file = os.path.join(
+            current_dir, "domain_knowledge", feature_name, "microservices.txt"
+        )
+
+        if os.path.exists(microservices_file):
+            with open(microservices_file, "r") as f:
+                content = f.read().strip()
+                print(f"Found microservices.txt for {feature_name}: {content}")
+                return content
+        else:
+            # Default fallback if file not found
+            default_microservices = "(ai-ops-orchestrator OR ai-ops-insights OR ai-ops-analytics OR vdb-applications OR ai-ops-alert-services)"
+            print(
+                f"microservices.txt not found for {feature_name}, using default: {default_microservices}"
+            )
+            return default_microservices
+
+    except Exception as e:
+        print(f"Error reading microservices.txt for {feature_name}: {e}")
+        # Default fallback on error
+        return "(ai-ops-orchestrator OR ai-ops-insights OR ai-ops-analytics OR vdb-applications OR ai-ops-alert-services)"
+
+
 def construct_filter(
     log_level: Optional[str] = None,
     tenant_id: Optional[str] = None,
-    keywords: Optional[List[str]] = None,
+    feature_name: Optional[str] = "100_ElephantFlows",
 ) -> str:
     """
     Constructs a Datadog query string using DEFAULT_FILTERS.
     Replaces {log_level} placeholder with the provided log_level.
     Replaces {tenant_id} placeholder with the provided tenant_id.
-    Appends keywords as OR'd quoted terms in parentheses if provided.
+    Replaces {microservices} placeholder with content from microservices.txt.
 
     Args:
         log_level: Log level to filter by ("error", "debug", "info")
         tenant_id: Tenant ID to filter logs by
-        keywords: List of keywords to search for (will be OR'd together in quotes)
+        feature_name: Feature name to determine which microservices.txt to use
 
     Returns:
         Constructed Datadog query string
@@ -53,10 +89,9 @@ def construct_filter(
     if tenant_id:
         query = query.replace("{tenant_id}", tenant_id)
 
-    # Append keywords if provided
-    if keywords:
-        keyword_query = " OR ".join([f'"{keyword}"' for keyword in keywords])
-        query = f"{query} ({keyword_query})"
+    # Replace {microservices} placeholder with content from microservices.txt
+    microservices_text = get_microservices_text(feature_name)
+    query = query.replace("{microservices}", microservices_text)
 
     return query
 
@@ -94,11 +129,11 @@ def get_time_range() -> Tuple[datetime, datetime]:
 
 
 def retrieve_logs(
+    feature_name: str,
     start_time: Optional[datetime] = None,
     end_time: Optional[datetime] = None,
     log_level: Optional[str] = None,
     tenant_id: Optional[str] = None,
-    keywords: Optional[List[str]] = None,
 ) -> List[dict]:
     """
     Retrieve logs from Datadog between the specified UTC datetime objects. log_level can be used to filter the logs by log level. log_level can be "error", "debug", "info".
@@ -106,16 +141,25 @@ def retrieve_logs(
     First, use this function to retrieve the error logs between two timestamps. Once the exact timestamp of the error is found, use the same function to retrieve info or debug logs around that timestamp.
 
     Args:
+        feature_name: Feature name to determine which microservices.txt to use (MANDATORY).
         start_time: Start time as UTC datetime object. If None, uses last 6 hours.
         end_time: End time as UTC datetime object. If None, uses current time.
         log_level: Log level filter ("error", "debug", "info"). Replaces {log_level} in filters.
         tenant_id: Tenant ID to filter logs by.
-        keywords: List of keywords to search for in logs.
 
     Returns:
         List of log dictionaries containing timestamp, message, and other attributes
+
+    Raises:
+        ValueError: If feature_name is not provided or is empty
     """
     try:
+        # Validate that feature_name is provided and not empty
+        if not feature_name or not feature_name.strip():
+            raise ValueError(
+                "feature_name is mandatory and cannot be empty. Please provide a valid feature name (e.g., '100_ElephantFlows')"
+            )
+
         # Setup API client
         with setup_datadog_client() as api_client:
             api_instance = LogsApi(api_client)
@@ -134,7 +178,7 @@ def retrieve_logs(
 
             # Setup query filter
             query = construct_filter(
-                log_level=log_level, tenant_id=tenant_id, keywords=keywords
+                log_level=log_level, tenant_id=tenant_id, feature_name=feature_name
             )
             print(f"Filters: {query}")
             print("-" * 60)
@@ -198,7 +242,7 @@ def retrieve_logs(
 
     except Exception as e:
         print(f"Error retrieving logs: {str(e)}")
-        raise
+        return []
 
 
 def save_logs_to_file(logs: List[dict]) -> None:
@@ -251,7 +295,7 @@ def main() -> None:
             start_time=start_time,
             end_time=now,
             tenant_id="af5f6035-7538-4709-b073-7b5f4b69543c",
-            keywords=["MEMORY_LINA_THRESHOLD_BREACH", "MEMORY_SNORT_THRESHOLD_BREACH"],
+            feature_name="100_ElephantFlows",
         )
         save_logs_to_file(logs)
         print("\nLog retrieval completed successfully!")
