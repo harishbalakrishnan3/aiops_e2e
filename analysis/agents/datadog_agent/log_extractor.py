@@ -215,6 +215,7 @@ def retrieve_logs(
                         log_dict["message"] = log.attributes.message
 
                     # Add additional attributes
+
                     if hasattr(log.attributes, "service"):
                         log_dict["service"] = log.attributes.service
 
