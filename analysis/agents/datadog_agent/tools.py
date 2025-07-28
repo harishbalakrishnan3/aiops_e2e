@@ -151,28 +151,30 @@ def get_current_timestamp_iso() -> str:
 @tool
 def extract_datadog_logs_between_timestamps_for_tenant(
     start_time: Union[str, dict],
+    feature_name: str = "",
     end_time: str = "",
     log_level: str = "error",
     tenant_id: str = "",
-    keywords: List[str] = None,
 ) -> str:
     """
     Extracts logs of a given log level from Datadog between two timestamps. Logs retrieved without filters are typically voluminous.
-    If keywords are not supplied, to anchor to the relevant timestamps, typically you would first call this function to get the error logs between two timestamps.
-    Once the exact timestamp of the error is found, use the same function to retrieve info or debug logs around that timestamp to get more context.
-    If keywords are specified, anchoring to relevant timestamps is easier. In this case, you would pass in the keyword and use the info log level to get the relevant timestamps.
-    In further iterations, you can re-invoke this function with appropriate context window around the anchored timestamps to get more context.
+    Hence, it is better to anchor to the relevant timestamps first and then use the same function to retrieve debug logs around that timestamp to get more context.
+    If the approximate timestamp is known, you can use the same function to retrieve debug logs around that timestamp to get more context and use a context window of 20 minutes.
 
     Args:
         start_time (Union[str, dict]): Start time in ISO 8601 format (e.g., "2025-01-20T15:30:45+00:00")
                                      Can also be a dict/JSON with all parameters
+        feature_name (str): Feature name to determine which context to use (MANDATORY)
         end_time (str): End time in ISO 8601 format (e.g., "2025-01-20T16:30:45+00:00")
         log_level (str): Log level to extract (error, debug, info)
         tenant_id (str): Tenant ID to filter logs by
-        keywords (List[str]): List of keywords to filter logs by
+
 
     Returns:
         str: Filtered logs (in JSON format) between the two timestamps as a string
+
+    Raises:
+        ValueError: If feature_name is not provided or is empty
     """
     try:
         # Handle case where all parameters are passed as a JSON string or dict in start_time
@@ -182,15 +184,21 @@ def extract_datadog_logs_between_timestamps_for_tenant(
             end_time = params.get("end_time", "")
             log_level = params.get("log_level", "error")
             tenant_id = params.get("tenant_id", "")
-            keywords = params.get("keywords", None)
+            feature_name = params.get("feature_name", "")
         elif isinstance(start_time, dict):
             start_time_str = start_time.get("start_time", "")
             end_time = start_time.get("end_time", "")
             log_level = start_time.get("log_level", "error")
             tenant_id = start_time.get("tenant_id", "")
-            keywords = start_time.get("keywords", None)
+            feature_name = start_time.get("feature_name", "")
         else:
             start_time_str = str(start_time)
+
+        # Validate that feature_name is provided and not empty
+        if not feature_name or not feature_name.strip():
+            raise ValueError(
+                "feature_name is mandatory and cannot be empty. Please provide a valid feature name (e.g., '100_ElephantFlows')"
+            )
 
         # Convert ISO timestamp strings to UTC datetime objects
         start_time_dt = datetime.fromisoformat(start_time_str.replace("Z", "+00:00"))
@@ -198,10 +206,10 @@ def extract_datadog_logs_between_timestamps_for_tenant(
 
         logs = retrieve_logs(
             start_time=start_time_dt,
+            feature_name=feature_name,
             end_time=end_time_dt,
             log_level=log_level,
             tenant_id=tenant_id,
-            keywords=keywords,
         )
         return "\n".join(str(log) for log in logs)
 
