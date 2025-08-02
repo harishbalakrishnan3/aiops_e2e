@@ -1,14 +1,13 @@
-from tracemalloc import start
 from langchain_core.tools import tool
 from langgraph.types import Command, Send
 
 from typing import List, Optional, Union, Annotated
 from langchain_core.messages import filter_messages
-from langgraph.graph.message import MessagesState
 from langgraph.prebuilt import InjectedState
 from .log_parser import parse_log_file
-from model import AnalyzerState
+from model import AgentState
 from data_proccesor.data_processor import processed_file_path
+
 
 @tool
 def get_logs(
@@ -27,7 +26,7 @@ def get_logs(
     Returns:
         List of log entries
     """
-    path =  processed_file_path / path
+    path = processed_file_path / path
     print("Getting logs from file: ", processed_file_path / path)
     return parse_log_file(path, levels, start_time, end_time)
 
@@ -37,7 +36,7 @@ def get_logs(
     description="Transfer to the validation_issue_analyzer when the root cause is related to validation failure , assertion failure or verification failure",
 )
 def transfer_to_validation_issue_analyzer(
-    state: Annotated[AnalyzerState, InjectedState],
+    state: Annotated[AgentState, InjectedState],
 ) -> Command:
     ai_messages = filter_messages(state["messages"], include_types="ai")
     root_cause = ai_messages[-1].content[0]["text"]
