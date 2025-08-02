@@ -6,6 +6,18 @@ from langchain_core.messages import filter_messages
 from langchain_core.messages import AIMessage
 
 
+def get_analyzer_graph():
+    builder = StateGraph(AnalyzerState)
+    builder.add_node("jenkins_log_analyzer_agent", jenkins_node)
+    builder.add_node("validation_issue_analyzer", validation_issue_analyzer_node)
+    builder.add_node("analyzer_result_node", analyzer_result_node)
+    builder.add_edge(START, "jenkins_log_analyzer_agent")
+    builder.add_edge("jenkins_log_analyzer_agent", "analyzer_result_node")
+    builder.add_edge("validation_issue_analyzer", "analyzer_result_node")
+    builder.add_edge("analyzer_result_node", END)
+    return builder.compile()
+
+
 def jenkins_node(state: AnalyzerState):
     jenkins_log_analyzer_agent = get_jenkins_agent()
     response = jenkins_log_analyzer_agent.invoke(state)
@@ -24,15 +36,3 @@ def analyzer_result_node(state: AnalyzerState):
     if len(ai_messages) == 0:
         return {"task_analysis": []}
     return {"task_analysis": [ai_messages[-1].content]}
-
-
-def get_analyzer_graph():
-    builder = StateGraph(AnalyzerState)
-    builder.add_node("jenkins_log_analyzer_agent", jenkins_node)
-    builder.add_node("validation_issue_analyzer", validation_issue_analyzer_node)
-    builder.add_node("analyzer_result_node", analyzer_result_node)
-    builder.add_edge(START, "jenkins_log_analyzer_agent")
-    builder.add_edge("jenkins_log_analyzer_agent", "analyzer_result_node")
-    builder.add_edge("validation_issue_analyzer", "analyzer_result_node")
-    builder.add_edge("analyzer_result_node", END)
-    return builder.compile()
