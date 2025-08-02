@@ -1,8 +1,15 @@
 from abc import ABC, abstractmethod
 import os
+from pathlib import Path
 import tempfile
 import shutil
 import re
+
+
+base_dir = Path(__file__).resolve().parent
+processed_file_path = base_dir / "mock_data" / "analysis" / "processed"
+get_raw_file_base_path = base_dir / "mock_data" / "analysis" / "raw"
+archive_base_path = base_dir / "mock_data" / "archive"
 
 
 class PipelineStage(ABC):
@@ -12,8 +19,8 @@ class PipelineStage(ABC):
 
 
 class LogExtractorStage(PipelineStage):
-    INPUT_DIR = "./mock_data/archive"
-    OUTPUT_DIR = "./mock_data/analysis/raw"
+    INPUT_DIR = archive_base_path
+    OUTPUT_DIR = get_raw_file_base_path
 
     def process(self):
         """
@@ -31,8 +38,8 @@ class LogExtractorStage(PipelineStage):
 
 
 class ScenarioSplitterStage(PipelineStage):
-    INPUT_DIR = "./mock_data/analysis/raw"
-    OUPUT_DIR = "./mock_data/analysis/processed"
+    INPUT_DIR = get_raw_file_base_path
+    OUPUT_DIR = processed_file_path
 
     def split_logs_by_scenario(self, input_path, output_dir):
         scenario_files = {}
@@ -91,7 +98,7 @@ class ScenarioSplitterStage(PipelineStage):
 
 
 class DateCleanupStage(PipelineStage):
-    INPUT_DIR = "./mock_data/analysis/processed"
+    INPUT_DIR = processed_file_path
 
     KEYWORDS = [
         "Exported metric",

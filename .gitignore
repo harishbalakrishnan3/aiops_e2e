@@ -8,3 +8,4 @@ utils/*_data/*
 utils/mimirtool
 utils/promtool
 utils/prometheus
+analysis/data_proccesor/mock_data/
