@@ -11,13 +11,24 @@ class Task(TypedDict):
     tenant_uid: str
 
 
-class ParentState(AgentState):
+class OrchestratorState(TypedDict):
     messages: Annotated[list, add_messages]
-    result: Annotated[list, operator.add]
     tasks: list[Task]
+    # shared state filed between shared and parent graph , used for data passing between the graphs
+    task_analysis: Annotated[list, operator.add]
+    # result state field where the consolidated results are stored
+    result: list
 
 
-class AnalyzerState(AgentState):
+class AnalyzerState(TypedDict):
+    messages: Annotated[list, add_messages]
+    tenant_uid: Optional[str]
+    scenario_name: Optional[str]
+    # shared state filed
+    task_analysis: Annotated[list, operator.add]
+
+
+class AnalyzerAgentState(AgentState):
     messages: Annotated[list, add_messages]
     tenant_uid: Optional[str]
     scenario_name: Optional[str]
