@@ -1,5 +1,6 @@
 from langchain_aws import ChatBedrockConverse
 from langgraph.prebuilt import create_react_agent
+from model import AnalyzerState
 from .tools import get_logs, transfer_to_validation_issue_analyzer
 
 agent_prompt = """
@@ -44,5 +45,6 @@ def get_jenkins_agent():
     return create_react_agent(
         model=llm,
         tools=[get_logs, transfer_to_validation_issue_analyzer],
+        state_schema=AnalyzerState,
         prompt=agent_prompt,
     )
