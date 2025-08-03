@@ -25,7 +25,7 @@ def jenkins_node(state: AnalyzerState):
 
 
 def validation_issue_analyzer_node(state: AgentState):
-    # TODO ADD BACK FTER TESTING CONSOLIDATION OF RESULTS
+    # TODO ADD BACK AFTER TESTING CONSOLIDATION OF RESULTS
     # validation_issue_analyzer_agent = get_datadog_agent()
     # response = validation_issue_analyzer_agent.invoke(state)
     return {"messages": [AIMessage(content="test response")]}
