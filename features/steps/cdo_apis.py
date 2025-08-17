@@ -94,7 +94,7 @@ def verify_insight_type_and_state(context, insight_type, state):
                     f"Expected insight type: {insight_type} - state: {state} - device name: {context.scenario_to_device_map[context.scenario].device_name} - device id: {context.scenario_to_device_map[context.scenario].aegis_device_uid}"
                 )
                 logging.debug(f"Actual Insight: {insight}")
-    logging.error(
+    logging.info(
         f"Failed to find an insight with type: {insight_type} and state: {state} for device name: {context.scenario_to_device_map[context.scenario].device_name} and device id: {context.scenario_to_device_map[context.scenario].aegis_device_uid}"
     )
     return False

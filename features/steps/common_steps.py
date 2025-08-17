@@ -48,7 +48,14 @@ def step_impl(context):
 
 @step("verify if an {insight_type} insight with state {insight_state} is created")
 def step_impl(context, insight_type, insight_state):
-    assert_that(verify_insight_type_and_state(context, insight_type, insight_state))
+    verification_status = verify_insight_type_and_state(
+        context, insight_type, insight_state
+    )
+    if not verification_status:
+        logging.error(
+            f"Failed to verify insight of type {insight_type} and state {insight_state}"
+        )
+    assert_that(verification_status)
 
 
 @step(
@@ -60,6 +67,9 @@ def step_impl(context, insight_type, insight_state, timeout):
             assert_that(True)
             return
         time.sleep(60)
+    logging.error(
+        f"Failed to verify insight of type {insight_type} and state {insight_state}"
+    )
     assert_that(False)
 
 
@@ -69,6 +79,9 @@ def step_impl(context, insight_type, insight_state, timeout):
 def step_impl(context, insight_type, insight_state, timeout):
     for i in range(int(timeout)):
         if verify_insight_type_and_state(context, insight_type, insight_state):
+            logging.error(
+                f"Found insight of type {insight_type} and state {insight_state} , when none was expected"
+            )
             assert_that(False)
             return
         time.sleep(60)
