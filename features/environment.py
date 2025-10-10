@@ -83,7 +83,7 @@ def before_all(context):
     context.generated_data_list = []
 
     # Get the remote write config for GCM
-    context.remote_write_config = get_gcm_remote_write_config()
+    # context.remote_write_config = get_gcm_remote_write_config()
 
 
 def update_device_details(context):

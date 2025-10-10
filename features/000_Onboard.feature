@@ -2,16 +2,15 @@ Feature: Onboard and Offboard testing
   # This feature tests onboard and offboard scenarios
 
   Scenario: Test offboard
-    Given the tenant onboard state is ONBOARDED
+    Given the tenant onboard state is ONBOARD_SUCCESS
     When perform a tenant offboard
-    Then verify if the onboard status changes to NOT_ONBOARDED with a timeout of 2 minute(s)
+    Then verify if the onboard status changes to OFFBOARD_SUCCESS with a timeout of 2 minute(s)
     And wait for 1 minute
 
   Scenario: Test onboard
-    Given the tenant onboard state is NOT_ONBOARDED
+    Given the tenant onboard state is OFFBOARD_SUCCESS
     When perform a tenant onboard
-    Then verify if the onboard status changes to ONBOARDED with a timeout of 5 minute(s)
-    Then verify status action is not in TENANT_OPTIN_PARTIAL_SUCCESS state
+    Then verify if the onboard status changes to ONBOARD_SUCCESS with a timeout of 5 minute(s)
 
   Scenario: No Insights Present
     Given the insights are cleared

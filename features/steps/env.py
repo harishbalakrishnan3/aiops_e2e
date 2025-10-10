@@ -24,11 +24,20 @@ class Endpoints:
         self.TENANT_ONBOARD_URL = (
             self.BASE_URL + "/api/platform/ai-ops-orchestrator/v1/tenant/onboard"
         )
+        self.TENANT_ONBOARD_V2_URL = (
+            self.BASE_URL + "/api/platform/ai-ops-orchestrator/v2/tenant/onboard"
+        )
         self.TENANT_STATUS_URL = (
             self.BASE_URL + "/api/platform/ai-ops-orchestrator/v1/tenant/status"
         )
+        self.TENANT_STATUS_V2_URL = (
+            self.BASE_URL + "/api/platform/ai-ops-orchestrator/v2/tenant/status"
+        )
         self.TENANT_OFFBOARD_URL = (
             self.BASE_URL + "/api/platform/ai-ops-orchestrator/v1/tenant/offboard"
+        )
+        self.TENANT_OFFBOARD_V2_URL = (
+            self.BASE_URL + "/api/platform/ai-ops-orchestrator/v2/tenant/offboard"
         )
         self.DATA_INGEST_URL = (
             self.BASE_URL + "/api/platform/ai-ops-data-ingest/v1/healthmetrics"
