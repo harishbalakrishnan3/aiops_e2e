@@ -21,7 +21,7 @@ def step_impl(context, action):
 @step("the tenant onboard state is {state}")
 def step_impl(context, state):
     response = get_onboard_status()
-    assert_that(response["onboardState"] == state)
+    assert_that(response["overallStatus"] == state)
 
 
 @step(
