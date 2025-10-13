@@ -37,8 +37,33 @@ def get_insights(query_params=None, fields=None):
     return get(url, print_body=False)
 
 
-def delete_insights():
-    delete(endpoints.INSIGHTS_URL)
+def delete_insights(limit=200, offset=0):
+    url = endpoints.INSIGHTS_URL
+    params = [f"limit={limit}", f"offset={offset}"]
+    url += "?" + "&".join(params)
+    delete(url)
+
+
+def delete_all_insights():
+    # First get the total count of insights
+    insights_response = get_insights()
+    total_count = insights_response.get("count", 0)
+    batch_size = 200
+    
+    if total_count == 0:
+        logging.info("No insights found to delete.")
+        return
+    
+    logging.info(f"Found {total_count} insights. Deleting in batches of {batch_size}.")
+    
+    # Delete in batches
+    offset = 0
+    while offset < total_count:
+        logging.info(f"Deleting insights batch: offset={offset}, limit={batch_size}")
+        delete_insights(limit=batch_size, offset=offset)
+        offset += batch_size
+    
+    logging.info(f"Successfully deleted all {total_count} insights.")
 
 
 def remote_write(metrics_data: MetricsData):

@@ -17,7 +17,7 @@ from model import ScenarioEnum
 from features.steps.env import Path, get_endpoints
 from features.steps.metrics import batch_remote_write
 from features.steps.cdo_apis import (
-    delete_insights,
+    delete_all_insights,
     post,
     verify_insight_type_and_state,
     get_insights,
@@ -43,7 +43,7 @@ from mockseries.seasonality.sinusoidal_seasonality import SinusoidalSeasonality
 
 @step("the insights are cleared")
 def step_impl(context):
-    delete_insights()
+    delete_all_insights()
 
 
 @step("verify if an {insight_type} insight with state {insight_state} is created")
