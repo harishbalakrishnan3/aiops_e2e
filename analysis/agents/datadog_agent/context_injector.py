@@ -150,6 +150,27 @@ class ContextInjector:
         else:
             return "CSV files found but no readable content available."
 
+    def load_context(self, feature_name: str, scenario_name: str) -> str:
+        """Load context from the scenario's context.md file."""
+        context_path = os.path.join(
+            self.domain_knowledge_path, feature_name, scenario_name, "context.md"
+        )
+
+        try:
+            with open(context_path, "r", encoding="utf-8") as f:
+                context_content = f.read().strip()
+                return (
+                    context_content
+                    if context_content
+                    else f"Context file is empty for {feature_name}/{scenario_name}."
+                )
+        except FileNotFoundError:
+            return f"No context.md file found for {feature_name}/{scenario_name}."
+        except Exception as e:
+            return (
+                f"Error reading context.md for {feature_name}/{scenario_name}: {str(e)}"
+            )
+
     def inject_context(self, user_prompt: str) -> Dict[str, Any]:
         """Extract context from user prompt and inject relevant data."""
         feature_name, scenario_name = self.extract_feature_and_scenario(user_prompt)
@@ -163,10 +184,14 @@ class ContextInjector:
         # Load successful runs
         successful_runs = self.load_successful_runs(feature_name, scenario_name)
 
+        # Load context
+        context = self.load_context(feature_name, scenario_name)
+
         return {
             "feature_name": feature_name,
             "scenario_name": scenario_name,
             "microservices": microservices,
             "updated_filters": updated_filters,
             "successful_runs": successful_runs,
+            "context": context,
         }

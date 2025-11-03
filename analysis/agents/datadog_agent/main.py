@@ -24,15 +24,17 @@ def lookup():
         temperature=0,
     )
     template = """
-    You are a helpful assistant that can answer questions from the user by retrieving logs from datadog and analyzing them. Your answer must be precise and concise. 
+    You are a helpful assistant that can answer questions from the user by retrieving logs from datadog and analyzing them.
+    Your answer must be a summary that is precise and concise and shouldn't exceed 100 words. 
 
     User Prompt: {user_prompt}
     Feature: {feature_name}
     Scenario: {scenario_name}
     Relevant microservices: {microservices}
+    Context: {context}
     Examples of successful runs: {successful_runs}
     
-    Use the provided context to better understand the system behavior and compare against the successful runs when analyzing.
+    Use the provided context to better understand the system behavior and compare against the current run when analyzing.
     """
     prompt_template = PromptTemplate.from_template(template)
     tools = get_tools()
@@ -40,9 +42,17 @@ def lookup():
     agent = create_react_agent(llm, tools, react_prompt)
     agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
+    # Offboard scenario
+    timestamp_to_analyze = "2025-07-27T17:31:11Z"
+    user_prompt = f"What happened in the OFFBOARD scenario of the 000_Onboard feature for tenant ID af5f6035-7538-4709-b073-7b5f4b69543c around {timestamp_to_analyze}"
+
+    # # Onboard scenario
+    # timestamp_to_analyze = "2025-07-27T17:32:22Z"
+    # user_prompt = f"What happened in the ONBOARD scenario of the 000_Onboard feature for tenant ID af5f6035-7538-4709-b073-7b5f4b69543c around {timestamp_to_analyze}"
+
     # Elephant Flows Enhanced scenario
-    timestamp_to_analyze = "2025-07-27T17:45:31Z"
-    user_prompt = f"What happened in the ELEPHANTFLOW_ENHANCED scenario of the 100_ElephantFlows feature that happened in device id c5d308c8-3168-11f0-bd43-f2c0a0fdf6a8 for tenant ID af5f6035-7538-4709-b073-7b5f4b69543c around {timestamp_to_analyze}"
+    # timestamp_to_analyze = "2025-07-27T17:45:31Z"
+    # user_prompt = f"What happened in the ELEPHANTFLOW_ENHANCED scenario of the 100_ElephantFlows feature that happened in device id c5d308c8-3168-11f0-bd43-f2c0a0fdf6a8 for tenant ID af5f6035-7538-4709-b073-7b5f4b69543c around {timestamp_to_analyze}"
 
     # # Elephant Flows Legacy scenario
     # timestamp_to_analyze = "2025-07-27T17:53:38Z"
@@ -58,6 +68,7 @@ def lookup():
         feature_name=context["feature_name"],
         scenario_name=context["scenario_name"],
         microservices=context["microservices"],
+        context=context["context"],
         successful_runs=context["successful_runs"],
     )
 

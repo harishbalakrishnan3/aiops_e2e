@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from enum import Enum
+from typing import Optional
 
 
 class Device(BaseModel):
@@ -7,7 +8,7 @@ class Device(BaseModel):
     aegis_device_uid: str
     device_record_uid: str
     ra_vpn_enabled: bool = False
-    container_type: str | None = None
+    container_type: Optional[str] = None
 
 
 class ScenarioEnum(str, Enum):
