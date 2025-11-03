@@ -34,11 +34,11 @@ class Endpoints:
             self.BASE_URL + "/api/platform/ai-ops-orchestrator/v2/tenant/offboard"
         )
         self.DATA_INGEST_URL = (
-            self.BASE_URL + "/api/platform/ai-ops-data-ingest/v1/healthmetrics"
+            self.BASE_URL + "/api/platform/ai-ops-data-ingest/v2/healthmetrics"
         )
         self.PROMETHEUS_RANGE_QUERY_URL = (
             self.BASE_URL
-            + "/api/platform/ai-ops-data-query/v1/healthmetrics/queryRange"
+            + "/api/platform/ai-ops-data-query/v2/healthmetrics/queryRange"
         )
         self.TRIGGER_MANAGER_URL = (
             self.BASE_URL + "/api/platform/ai-ops-orchestrator/v1/trigger"
@@ -53,7 +53,7 @@ class Endpoints:
             self.BASE_URL + "/api/platform/device-gateway/command"
         )
         self.TENANT_GCM_STACK_CONFIG_URL = (
-            self.BASE_URL + "/api/platform/ai-ops-tenant-services/v1/timeseries-stack"
+            self.BASE_URL + "/api/platform/ai-ops-tenant-services/v2/timeseries-stack"
         )
         self.AI_OPS_ANOMALY_DETECTION_FORECAST_TRIGGER_URL = (
             self.BASE_URL + "/api/platform/ai-ops-anomaly-detection/v1/trigger/forecast"
