@@ -1,7 +1,7 @@
 @wip
 Feature: Elephant flows
   Background: 
-    Given the tenant onboard state is ONBOARDED
+    Given the tenant onboard state is ONBOARD_SUCCESS
 
     Scenario: Test Elephant Flow alerts with enhanced data(7.7 device)
       Then push timeseries for 7 minute(s) of which send last 2 minute(s) of timeseries in live mode

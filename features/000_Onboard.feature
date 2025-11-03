@@ -13,5 +13,6 @@ Feature: Onboard and Offboard testing
     Then verify if the onboard status changes to ONBOARD_SUCCESS with a timeout of 5 minute(s)
 
   Scenario: No Insights Present
-    Given the insights are cleared
+    Given the tenant onboard state is ONBOARD_SUCCESS
+    When the insights are cleared
     Then verify no insight is present with a timeout of 2 minute(s)

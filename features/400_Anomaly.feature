@@ -1,7 +1,7 @@
 @wip
 Feature: Testing Anomaly Detection
   Background: 
-    Given the tenant onboard state is ONBOARDED
+    Given the tenant onboard state is ONBOARD_SUCCESS
   Scenario: Testing Anomaly Detection for Connection Stats With Simple Linear Spike
     Then backfill metrics for a suitable device over 337 hour(s)
       | metric_name            | label_values                              | start_value | end_value | start_spike_minute | spike_duration_minutes | seasonality_period_hours | amplitude |
