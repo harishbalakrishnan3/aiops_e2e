@@ -39,8 +39,10 @@ def setup_logging():
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.DEBUG)
 
-    # Create formatter with ISO 8601 UTC timestamps (no module names)
-    formatter = UTCFormatter(fmt="[%(asctime)s] [%(levelname)s] %(message)s")
+    # Create formatter with ISO 8601 UTC timestamps with line numbers
+    formatter = UTCFormatter(
+        fmt="[%(asctime)s] [%(levelname)s] [%(filename)s:%(lineno)d] %(message)s"
+    )
     console_handler.setFormatter(formatter)
 
     # Add handler to logger
@@ -119,6 +121,13 @@ def update_device_details(context):
         get_endpoints().DEVICES_DETAILS_URL + "&limit=200", print_body=False
     )
     for device in device_details:
+        # Skip devices without metadata
+        if "metadata" not in device or device["metadata"] is None:
+            logging.debug(
+                f"Skipping device {device.get('name', 'unknown')} - no metadata"
+            )
+            continue
+
         device_obj = Device(
             device_name=device["name"],
             aegis_device_uid=device["uid"],
