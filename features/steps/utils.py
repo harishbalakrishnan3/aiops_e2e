@@ -376,3 +376,88 @@ def convert_to_backfill_data(
             )
 
     return backfill_data_list
+
+
+def compute_onboard_status_ignoring_fmc_export(response):
+    """
+    Computes the effective onboard status by ignoring FMC_METRIC_EXPORT task.
+
+    Returns the computed overall status based on:
+    - timeSeriesStore status
+    - dataSources status (excluding FMC_METRIC_EXPORT task)
+    - applications status
+
+    Valid statuses:
+    - SUCCESS: ONBOARD_SUCCESS, OFFBOARD_SUCCESS
+    - FAILURE: ONBOARD_FAILURE, OFFBOARD_FAILURE, ONBOARD_PARTIAL, OFFBOARD_PARTIAL
+    - IN_PROGRESS: ONBOARD_IN_PROGRESS, OFFBOARD_IN_PROGRESS
+    - IN_QUEUE: ONBOARD_IN_QUEUE, OFFBOARD_IN_QUEUE
+
+    Status priority: FAILURE/PARTIAL > IN_PROGRESS/IN_QUEUE > SUCCESS
+    """
+    statuses = []
+
+    # Check timeSeriesStore
+    if "timeSeriesStore" in response:
+        statuses.append(response["timeSeriesStore"]["status"])
+
+    # Check dataSources (excluding FMC_METRIC_EXPORT)
+    if "dataSources" in response:
+        for data_source in response["dataSources"]:
+            # Check tasks, excluding FMC_METRIC_EXPORT
+            if "tasks" in data_source:
+                filtered_tasks = [
+                    task
+                    for task in data_source["tasks"]
+                    if task["name"] != "FMC_METRIC_EXPORT"
+                ]
+                if filtered_tasks:
+                    # Collect statuses from filtered tasks
+                    for task in filtered_tasks:
+                        statuses.append(task["status"])
+                # If all tasks were FMC_METRIC_EXPORT, don't add any status
+            elif "status" in data_source:
+                statuses.append(data_source["status"])
+
+    # Check applications
+    if "applications" in response:
+        for app in response["applications"]:
+            if "status" in app:
+                statuses.append(app["status"])
+
+    # Determine overall status based on priority
+    # Priority: FAILURE/PARTIAL > IN_PROGRESS/IN_QUEUE > SUCCESS
+    has_failure = any("FAILURE" in status or "PARTIAL" in status for status in statuses)
+    has_in_progress = any(
+        "IN_PROGRESS" in status or "IN_QUEUE" in status for status in statuses
+    )
+    has_success = any("SUCCESS" in status for status in statuses)
+
+    if has_failure:
+        # Return appropriate failure status based on what's in the response
+        if any("ONBOARD_FAILURE" in status for status in statuses):
+            return "ONBOARD_FAILURE"
+        elif any("ONBOARD_PARTIAL" in status for status in statuses):
+            return "ONBOARD_PARTIAL"
+        elif any("OFFBOARD_FAILURE" in status for status in statuses):
+            return "OFFBOARD_FAILURE"
+        elif any("OFFBOARD_PARTIAL" in status for status in statuses):
+            return "OFFBOARD_PARTIAL"
+    elif has_in_progress:
+        # Return appropriate in-progress status
+        if any("ONBOARD_IN_PROGRESS" in status for status in statuses):
+            return "ONBOARD_IN_PROGRESS"
+        elif any("ONBOARD_IN_QUEUE" in status for status in statuses):
+            return "ONBOARD_IN_QUEUE"
+        elif any("OFFBOARD_IN_PROGRESS" in status for status in statuses):
+            return "OFFBOARD_IN_PROGRESS"
+        elif any("OFFBOARD_IN_QUEUE" in status for status in statuses):
+            return "OFFBOARD_IN_QUEUE"
+    elif has_success and all("SUCCESS" in status for status in statuses):
+        # All statuses contain SUCCESS
+        if any("ONBOARD_SUCCESS" in status for status in statuses):
+            return "ONBOARD_SUCCESS"
+        elif any("OFFBOARD_SUCCESS" in status for status in statuses):
+            return "OFFBOARD_SUCCESS"
+
+    return "UNKNOWN"
