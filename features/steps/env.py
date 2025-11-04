@@ -68,8 +68,8 @@ class Endpoints:
             "https://helios-ai-api-stage-gw.cisco.com/api/knowledge_bases"
         )
         self.HELIOS_THREADS = "https://helios-ai-api-stage-gw.cisco.com/api/threads"
-        self.FORECAST_DEVICE_DATA_URL = (
-            self.BASE_URL + "/api/platform/ai-ops-forecast/v1/device_data"
+        self.CAPACITY_ANALYTICS_DEVICE_DATA_URL = (
+            self.BASE_URL + "/api/platform/ai-ops-capacity-analytics/v1/device_data"
         )
 
 

@@ -49,20 +49,20 @@ def delete_all_insights():
     insights_response = get_insights()
     total_count = insights_response.get("count", 0)
     batch_size = 200
-    
+
     if total_count == 0:
         logging.info("No insights found to delete.")
         return
-    
+
     logging.info(f"Found {total_count} insights. Deleting in batches of {batch_size}.")
-    
+
     # Delete in batches
     offset = 0
     while offset < total_count:
         logging.info(f"Deleting insights batch: offset={offset}, limit={batch_size}")
         delete_insights(limit=batch_size, offset=offset)
         offset += batch_size
-    
+
     logging.info(f"Successfully deleted all {total_count} insights.")
 
 
@@ -141,7 +141,7 @@ def get_onboard_status():
 def update_device_data(device_uid):
     logging.info(f"Updating device data for {device_uid} to have 250 max sessions")
     payload = {"device_uid": device_uid, "max_vpn_sessions": 250}
-    return post(endpoints.FORECAST_DEVICE_DATA_URL, json.dumps(payload), 201)
+    return post(endpoints.CAPACITY_ANALYTICS_DEVICE_DATA_URL, json.dumps(payload), 201)
 
 
 def get(endpoint, print_body=True):

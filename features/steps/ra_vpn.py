@@ -133,7 +133,12 @@ def step_impl(context):
         "trigger-type": "SCHEDULE_TICKS",
         "config": {"periodicity": "INTERVAL_24_HOURS"},
         "pipeline": {
-            "output": [{"plugin": "SNS", "config": {"destination": "ai-ops-forecast"}}],
+            "output": [
+                {
+                    "plugin": "SNS",
+                    "config": {"destination": "ai-ops-capacity-analytics"},
+                }
+            ],
             "processor": [],
         },
         "deviceIds": [
