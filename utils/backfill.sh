@@ -11,7 +11,7 @@ HISTORICAL_DATA_FILE=$6
 /bin/rm -rf "$UTILS_DIR$DATA_BLOCK_DIR"*
 
 # Generate blocks from txt file
-"$UTILS_DIR"/promtool tsdb create-blocks-from openmetrics "$UTILS_DIR/$HISTORICAL_DATA_FILE" "$UTILS_DIR$DATA_BLOCK_DIR"
+"$UTILS_DIR"/promtool tsdb create-blocks-from --max-block-duration=12h openmetrics "$UTILS_DIR/$HISTORICAL_DATA_FILE" "$UTILS_DIR$DATA_BLOCK_DIR"
 
 # Upload all blocks to prometheus one by one
 for dir in "$UTILS_DIR$DATA_BLOCK_DIR"*/; do
