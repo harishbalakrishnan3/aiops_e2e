@@ -45,7 +45,7 @@ def step_impl(context):
     common_labels = {
         "instance": "127.0.0.2:9273",
         "job": "metrics_generator:8123",
-    } | get_common_labels(context, timedelta(days=14))
+    } | get_common_labels(context, timedelta(days=28))
 
     labels_1 = {**common_labels, "vpn": "active_ravpn_tunnels"}
     labels_2 = {**common_labels, "vpn": "inactive_ravpn_tunnels"}
@@ -83,7 +83,7 @@ def step_impl(context):
     logging.info(f"Backfill took {(end_time - start_time)/60:.2f} minutes")
 
     # Calculate the start and end times
-    start_time = datetime.now() - timedelta(days=14)
+    start_time = datetime.now() - timedelta(days=28)
     end_time = datetime.now() - timedelta(days=1)
 
     # Convert to epoch seconds
@@ -97,8 +97,8 @@ def step_impl(context):
     count = 0
     success = False
     while True:
-        # Exit after 60 minutes
-        if count > 60:
+        # Exit after 90 minutes
+        if count > 90:
             logging.error("Data not ingested in Prometheus. Exiting.")
             break
 
@@ -115,13 +115,13 @@ def step_impl(context):
                 f"Active RAVPN data points: {num_data_points_active_ravpn}. Inactive RAVPN data points: {num_data_points_inactive_ravpn}"
             )
             if (
-                num_data_points_active_ravpn > 3700
-                and num_data_points_inactive_ravpn > 3700
+                num_data_points_active_ravpn > 2500
+                and num_data_points_inactive_ravpn > 2500
             ):
                 success = True
                 break
 
-        time.sleep(60)
+        time.sleep(90)
         # TODO: Ingest live data till backfill data is available
     assert success
 
@@ -169,7 +169,7 @@ def is_device_present_with_ra_vpn_data(context):
 
 def generate_timeseries():
     # Trend component
-    trend = LinearTrend(coefficient=0.2, time_unit=timedelta(hours=0.95), flat_base=5)
+    trend = LinearTrend(coefficient=0.1, time_unit=timedelta(hours=0.95), flat_base=5)
 
     # Seasonality component
     seasonality = DailySeasonality(
@@ -197,8 +197,8 @@ def generate_timeseries():
 
     # Generate timeseries
     time_points = datetime_range(
-        granularity=timedelta(minutes=5),
-        start_time=datetime.now() - timedelta(days=14),
+        granularity=timedelta(minutes=15),
+        start_time=datetime.now() - timedelta(days=28),
         end_time=datetime.now(),
     )
     ts_values = timeseries.generate(time_points=time_points)
