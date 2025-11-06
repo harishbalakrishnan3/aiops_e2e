@@ -121,13 +121,17 @@ def update_device_details(context):
         get_endpoints().DEVICES_DETAILS_URL + "&limit=200", print_body=False
     )
     for device in device_details:
-        # Skip devices without metadata
-        if "metadata" not in device or device["metadata"] is None:
-            logging.debug(
-                f"Skipping device {device.get('name', 'unknown')} - no metadata"
+        # Skip devices without metadata or missing required metadata fields
+        if (
+            "metadata" not in device
+            or device["metadata"] is None
+            or "deviceRecordUuid" not in device["metadata"]
+            or "containerType" not in device["metadata"]
+        ):
+            logging.info(
+                f"Skipping device {device.get('name', 'unknown')} - missing metadata or required fields"
             )
             continue
-
         device_obj = Device(
             device_name=device["name"],
             aegis_device_uid=device["uid"],
