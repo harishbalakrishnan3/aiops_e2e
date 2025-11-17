@@ -1,4 +1,3 @@
-@wip
 Feature: Correlation testing
   Background: 
     Given the tenant onboard state is ONBOARD_SUCCESS
