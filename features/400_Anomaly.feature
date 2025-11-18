@@ -1,4 +1,3 @@
-@wip
 Feature: Testing Anomaly Detection
   Background: 
     Given the tenant onboard state is ONBOARD_SUCCESS
