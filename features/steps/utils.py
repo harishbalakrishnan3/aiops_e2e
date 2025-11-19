@@ -204,7 +204,7 @@ def find_device_available_for_data_ingestion(
         if not is_data_present(query.format(uuid=device.device_record_uid), duration):
             return device
     logging.error("No device available for ingestion , Failing test")
-    raise ("No device available for ingestion")
+    raise Exception("No device available for ingestion")
 
 
 def is_data_present(query: str, duration: timedelta, step="5m"):
