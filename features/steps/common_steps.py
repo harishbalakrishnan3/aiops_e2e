@@ -126,6 +126,11 @@ def step_impl(context, duration, live_duration):
         metric_type = (
             row["metric_type"] if "metric_type" in context.table.headings else "gauge"
         )
+        noise = (
+            row["noise"].lower() == "true"
+            if "noise" in context.table.headings
+            else None
+        )
         synthesized_ts_obj = generate_synthesized_ts_obj(
             context=context,
             metric_name=metric_name,
@@ -137,6 +142,7 @@ def step_impl(context, duration, live_duration):
             time_offset=timedelta(minutes=live_duration),
             duration=duration,
             metric_type=metric_type,
+            noise=noise,
         )
         synthesized_ts_list.append(synthesized_ts_obj)
 

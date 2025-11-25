@@ -43,4 +43,6 @@ class ScenarioEnum(str, Enum):
     ANOMALY_THROUGHPUT = (
         "Testing Anomaly Detection for Throughput Stats With Simple Linear Spike"
     )
+    CONNECTIONS_ANOMALY_STANDALONE = "Test CONNECTIONS_ANOMALY for standalone device"
+    CONNECTIONS_ANOMALY_HA = "Test CONNECTIONS_ANOMALY for HA device"
     UNKNOWN_SCENARIO = "Unknown scenario"
