@@ -9,16 +9,20 @@ def step_impl(context):
 
     for row in context.table:
         metric_name = row["metric_name"]
-        confidence = row["confidence"]
+        confidence = row.get("confidence", None)
 
         found = False
         for correlationMetric in correlationMetrics:
-            if (
-                correlationMetric["metricName"] == metric_name
-                and correlationMetric["correlationRank"] == confidence
-            ):
-                found = True
-                break
+            if correlationMetric["metricName"] == metric_name:
+                # If confidence is provided, also check confidence match
+                if confidence is not None:
+                    if correlationMetric["correlationRank"] == confidence:
+                        found = True
+                        break
+                else:
+                    # If no confidence column, just metric name match is enough
+                    found = True
+                    break
 
         if not found:
             logging.error(

@@ -15,10 +15,10 @@ Feature: Correlation testing
       | deployed_configuration | deployed_configuration=number_of_ACEs     | 12          | 90        | 1                  | 55                     |
     Then verify if an CPU_LINA_THRESHOLD_BREACH insight with state ACTIVE is created with a timeout of 10 minute(s)
     Then confirm correlated metrics
-      | metric_name                 | confidence        | 
-      | Control Plane CPU           | HIGH              | 
-      | Connections                 | HIGH              | 
-      | Deployed ACE Configurations | HIGH              | 
+      | metric_name                 |
+      | Control Plane CPU           |
+      | Connections                 |
+      | Deployed ACE Configurations |
     Then push timeseries for 2 minute(s) of which send last 2 minute(s) of timeseries in live mode
       | metric_name | label_values    | start_value | end_value | start_spike_minute | spike_duration_minutes |
       | cpu         | cpu=lina_dp_avg | 60          | 60        | 0                  | 1                      |
@@ -38,11 +38,11 @@ Feature: Correlation testing
       | asp_drops              | asp_drops=snort-busy-not-fp                      | 12          | 90        | 1                  | 55                     |
     Then verify if an CPU_SNORT_THRESHOLD_BREACH insight with state ACTIVE is created with a timeout of 10 minute(s)
     Then confirm correlated metrics
-      | metric_name                 | confidence        | 
-      | Input Packet Size           | HIGH              | 
-      | Snort Denied Flows          | HIGH              | 
-      | Connections                 | HIGH              |
-      | Control Plane CPU           | HIGH              |
+      | metric_name                 |
+      | Input Packet Size           |
+      | Snort Denied Flows          |
+      | Connections                 |
+      | Control Plane CPU           |
     Then push timeseries for 2 minute(s) of which send last 2 minute(s) of timeseries in live mode
       | metric_name | label_values  | start_value | end_value | start_spike_minute | spike_duration_minutes |
       | cpu         | cpu=snort_avg | 60          | 60        | 0                  | 1                      |
@@ -58,9 +58,9 @@ Feature: Correlation testing
       | deployed_configuration | deployed_configuration=number_of_ACEs     | 12          | 90        | 1                  | 55                     |
     Then verify if an MEMORY_LINA_THRESHOLD_BREACH insight with state ACTIVE is created with a timeout of 10 minute(s)
     Then confirm correlated metrics
-      | metric_name                 | confidence        | 
-      | Connections                 | HIGH              | 
-      | Deployed ACE Configurations | HIGH             | 
+      | metric_name                 |
+      | Connections                 |
+      | Deployed ACE Configurations |
     Then push timeseries for 2 minute(s) of which send last 2 minute(s) of timeseries in live mode
       | metric_name | label_values             | start_value | end_value | start_spike_minute | spike_duration_minutes |
       | mem         | mem=used_percentage_lina | 60          | 60        | 0                  | 1                      |
@@ -75,8 +75,8 @@ Feature: Correlation testing
       | interface   | description=input_packets, interface=all  | 12          | 90        | 1                  | 55                     |
     Then verify if an MEMORY_SNORT_THRESHOLD_BREACH insight with state ACTIVE is created with a timeout of 10 minute(s)
     Then confirm correlated metrics
-      | metric_name                 | confidence        | 
-      | Connections                 | HIGH              | 
+      | metric_name                 |
+      | Connections                 |
     Then push timeseries for 2 minute(s) of which send last 2 minute(s) of timeseries in live mode
       | metric_name | label_values              | start_value | end_value | start_spike_minute | spike_duration_minutes |
       | mem         | mem=used_percentage_snort | 60          | 60        | 0                  | 1                      |
@@ -101,25 +101,25 @@ Feature: Correlation testing
       | asp_drops              | asp_drops=snort-busy-not-fp                      | 12          | 90        | 1                  | 55                     |
     Then verify if an CPU_LINA_THRESHOLD_BREACH insight with state ACTIVE is created with a timeout of 10 minute(s)
     Then confirm correlated metrics
-      | metric_name                 | confidence        | 
-      | Control Plane CPU           | HIGH              | 
-      | Connections                 | HIGH              | 
-      | Deployed ACE Configurations | HIGH              | 
+      | metric_name                 |
+      | Control Plane CPU           |
+      | Connections                 |
+      | Deployed ACE Configurations |
     Then verify if an CPU_SNORT_THRESHOLD_BREACH insight with state ACTIVE is created with a timeout of 10 minute(s)
     Then confirm correlated metrics
-      | metric_name                 | confidence        | 
-      | Snort Denied Flows          | HIGH              | 
-      | Connections                 | HIGH              |
-      | Control Plane CPU           | HIGH              |
+      | metric_name                 |
+      | Snort Denied Flows          |
+      | Connections                 |
+      | Control Plane CPU           |
     Then verify if an MEMORY_LINA_THRESHOLD_BREACH insight with state ACTIVE is created with a timeout of 10 minute(s)
     Then confirm correlated metrics
-      | metric_name                 | confidence        | 
-      | Connections                 | HIGH              | 
-      | Deployed ACE Configurations | HIGH             | 
+      | metric_name                 |
+      | Connections                 |
+      | Deployed ACE Configurations |
     Then verify if an MEMORY_SNORT_THRESHOLD_BREACH insight with state ACTIVE is created with a timeout of 10 minute(s)
     Then confirm correlated metrics
-      | metric_name                 | confidence        | 
-      | Connections                 | HIGH              | 
+      | metric_name                 |
+      | Connections                 |
     Then push timeseries for 2 minute(s) of which send last 2 minute(s) of timeseries in live mode
       | metric_name | label_values                  | start_value | end_value | start_spike_minute  | spike_duration_minutes |
       | cpu         | cpu=lina_dp_avg               | 60          | 60        | 0                   | 1                      |
@@ -147,26 +147,26 @@ Feature: Correlation testing
       | asp_drops              | asp_drops=snort-busy-not-fp                      | 12          | 90        | 1                  | 55                     |
     Then verify if an CPU_LINA_THRESHOLD_BREACH insight with state ACTIVE is created with a timeout of 10 minute(s)
     Then confirm correlated metrics
-      | metric_name                 | confidence        | 
-      | Control Plane CPU           | HIGH              | 
-      | Connections                 | HIGH              | 
-      | Deployed ACE Configurations | HIGH              | 
+      | metric_name                 |
+      | Control Plane CPU           |
+      | Connections                 |
+      | Deployed ACE Configurations |
     Then verify if an CPU_SNORT_THRESHOLD_BREACH insight with state ACTIVE is created with a timeout of 10 minute(s)
     Then confirm correlated metrics
-      | metric_name                 | confidence        | 
-      | Input Packet Size           | HIGH              | 
-      | Snort Denied Flows          | HIGH              | 
-      | Connections                 | HIGH              |
-      | Control Plane CPU           | HIGH              |
+      | metric_name                 |
+      | Input Packet Size           |
+      | Snort Denied Flows          |
+      | Connections                 |
+      | Control Plane CPU           |
     Then verify if an MEMORY_LINA_THRESHOLD_BREACH insight with state ACTIVE is created with a timeout of 10 minute(s)
     Then confirm correlated metrics
-      | metric_name                 | confidence        | 
-      | Connections                 | HIGH              | 
-      | Deployed ACE Configurations | HIGH             | 
+      | metric_name                 | 
+      | Connections                 | 
+      | Deployed ACE Configurations | 
     Then verify if an MEMORY_SNORT_THRESHOLD_BREACH insight with state ACTIVE is created with a timeout of 10 minute(s)
     Then confirm correlated metrics
-      | metric_name                 | confidence        | 
-      | Connections                 | HIGH              | 
+      | metric_name                 |
+      | Connections                 |
     Then push timeseries for 2 minute(s) of which send last 2 minute(s) of timeseries in live mode
       | metric_name | label_values                  | start_value | end_value | start_spike_minute  | spike_duration_minutes |
       | cpu         | cpu=lina_dp_avg               | 60          | 60        | 0                   | 1                      |

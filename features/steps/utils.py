@@ -15,6 +15,8 @@ from features.steps.time_series_generator import (
     SeasonalityConfig,
     SeriesConfig,
     TransitionConfig,
+    NoiseConfig,
+    default_noise,
 )
 
 
@@ -189,6 +191,15 @@ def get_appropriate_device(context, duration) -> Device:
             query = 'query=conn_stats{{uuid="{uuid}"}}'
         case ScenarioEnum.ANOMALY_THROUGHPUT:
             query = 'query=interface{{interface="all", description="input_bytes", uuid="{uuid}"}} or interface{{interface="all", description="output_bytes", uuid="{uuid}"}}'
+        case ScenarioEnum.CONNECTIONS_ANOMALY_STANDALONE:
+            query = 'query=conn_stats{{uuid="{uuid}"}}'
+        case ScenarioEnum.CONNECTIONS_ANOMALY_HA:
+            available_devices = [
+                device
+                for device in context.devices
+                if device.container_type == "HA_PAIR"
+            ]
+            query = 'query=conn_stats{{uuid="{uuid}"}}'
         case _:
             logging.warning(
                 "No matching scenarios found , picking up the last available device"
@@ -233,9 +244,17 @@ def generate_synthesized_ts_obj(
     duration: int,
     time_offset: timedelta,
     metric_type: str = "gauge",
+    noise: bool = None,
 ) -> GeneratedData:
     now = datetime.now()
     offsetted_start_time = now - timedelta(minutes=duration) + time_offset
+
+    # Configure noise based on the noise parameter
+    if noise is None:
+        noise_config = default_noise
+    else:
+        noise_config = NoiseConfig(enable=noise) if noise else NoiseConfig(enable=False)
+
     generated_data = generate_timeseries(
         time_config=TimeConfig(
             series_config=SeriesConfig(
@@ -252,6 +271,7 @@ def generate_synthesized_ts_obj(
                 start_time=offsetted_start_time + timedelta(minutes=start_spike_minute),
             ),
         ),
+        noise_config=noise_config,
         seasonality_config=SeasonalityConfig(enable=False),
     )
 
