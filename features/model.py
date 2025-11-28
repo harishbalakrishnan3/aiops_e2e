@@ -1,5 +1,6 @@
-from pydantic import BaseModel
 from enum import Enum
+
+from pydantic import BaseModel
 
 
 class Device(BaseModel):
@@ -11,10 +12,11 @@ class Device(BaseModel):
 
 
 class ScenarioEnum(str, Enum):
-    ELEPHANTFLOW_ENHANCED = "Test Elephant Flow alerts with enhanced data(7.7 device)"
-    ELEPHANTFLOW_LEGACY = (
-        "Test Elephant Flow alerts with basic data(7.6 device or older)"
+    ELEPHANTFLOW_STANDALONE = "Test Elephant Flow alerts with multiple flows and applications for standalone device"
+    ELEPHANTFLOW_HA = (
+        "Test Elephant Flow alerts with multiple flows and applications for HA device"
     )
+    ELEPHANTFLOW_CLUSTER = "Test Elephant Flow alerts with multiple flows and applications for cluster device"
     CORRELATION_CPU_LINA = (
         "Push data and test correlation alerts for CPU_LINA_THRESHOLD_BREACH"
     )

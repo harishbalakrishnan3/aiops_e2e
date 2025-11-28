@@ -1,22 +1,24 @@
 import copy
-from datetime import timedelta, datetime
-import time
 import logging
+import time
+from datetime import datetime, timedelta
 from typing import List
+
 import pandas as pd
 from mockseries.transition import LinearTransition
 from pydantic import BaseModel
-from features.model import ScenarioEnum, Device
-from features.steps.env import get_endpoints
+
+from features.model import Device, ScenarioEnum
 from features.steps.cdo_apis import get, update_device_data
+from features.steps.env import get_endpoints
 from features.steps.time_series_generator import (
-    generate_timeseries,
-    TimeConfig,
+    NoiseConfig,
     SeasonalityConfig,
     SeriesConfig,
+    TimeConfig,
     TransitionConfig,
-    NoiseConfig,
     default_noise,
+    generate_timeseries,
 )
 
 
@@ -104,7 +106,21 @@ def get_appropriate_device(context, duration) -> Device:
 
     scenario = context.scenario
     match scenario:
-        case ScenarioEnum.ELEPHANTFLOW_ENHANCED | ScenarioEnum.ELEPHANTFLOW_LEGACY:
+        case ScenarioEnum.ELEPHANTFLOW_STANDALONE:
+            query = 'query=efd_cpu_usage{{uuid="{uuid}"}}'
+        case ScenarioEnum.ELEPHANTFLOW_HA:
+            available_devices = [
+                device
+                for device in context.devices
+                if device.container_type == "HA_PAIR"
+            ]
+            query = 'query=efd_cpu_usage{{uuid="{uuid}"}}'
+        case ScenarioEnum.ELEPHANTFLOW_CLUSTER:
+            available_devices = [
+                device
+                for device in context.devices
+                if device.container_type == "CLUSTER"
+            ]
             query = 'query=efd_cpu_usage{{uuid="{uuid}"}}'
         case ScenarioEnum.CORRELATION_CPU_LINA:
             query = (
