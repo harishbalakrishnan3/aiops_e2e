@@ -106,16 +106,16 @@ def get_appropriate_device(context, duration) -> Device:
 
     scenario = context.scenario
     match scenario:
-        case ScenarioEnum.ELEPHANTFLOW_STANDALONE:
+        case ScenarioEnum.ELEPHANTFLOW_LEGACY:
             query = 'query=efd_cpu_usage{{uuid="{uuid}"}}'
-        case ScenarioEnum.ELEPHANTFLOW_HA:
+        case ScenarioEnum.ELEPHANTFLOW_LEGACY_HA:
             available_devices = [
                 device
                 for device in context.devices
                 if device.container_type == "HA_PAIR"
             ]
             query = 'query=efd_cpu_usage{{uuid="{uuid}"}}'
-        case ScenarioEnum.ELEPHANTFLOW_CLUSTER:
+        case ScenarioEnum.ELEPHANTFLOW_LEGACY_CLUSTER:
             available_devices = [
                 device
                 for device in context.devices

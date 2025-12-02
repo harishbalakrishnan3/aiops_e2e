@@ -1,0 +1,30 @@
+{
+  "flows": [
+    {
+      "sourceIp": "10.10.0.98",
+      "destinationIp": "20.20.0.98",
+      "sourcePort": 56324,
+      "destinationPort": 3306,
+      "protocol": 6,
+      "application": {
+        "id": 0,
+        "name": null,
+        "description": null,
+        "riskIndex": 0
+      }
+    },
+    {
+      "sourceIp": "10.10.0.98",
+      "destinationIp": "20.20.0.98",
+      "sourcePort": 56326,
+      "destinationPort": 3306,
+      "protocol": 6,
+      "application": {
+        "id": 0,
+        "name": null,
+        "description": null,
+        "riskIndex": 0
+      }
+    }
+  ]
+}
