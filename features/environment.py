@@ -179,7 +179,7 @@ def before_feature(context, feature):
             "severity": "AUTO",
             "forecastDurationInDays": 30,
             "maxSessionsThreshold": 100.0,
-            "accuracyLevel": "MEDIUM",
+            "accuracyLevel": "LOW",
             "minimumTrainingPeriodInDays": 7,
             "historyDurationInDays": 28,
         }
