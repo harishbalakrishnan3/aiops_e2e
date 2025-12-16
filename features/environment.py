@@ -181,7 +181,7 @@ def before_feature(context, feature):
             "maxSessionsThreshold": 100.0,
             "accuracyLevel": "LOW",
             "minimumTrainingPeriodInDays": 7,
-            "historyDurationInDays": 56,
+            "historyDurationInDays": 21,
         }
         update_module_settings("ravpn-capacity-forecast", module_settings)
     elif feature.name == "Testing Anomaly Detection":

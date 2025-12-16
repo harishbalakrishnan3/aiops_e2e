@@ -45,7 +45,7 @@ def step_impl(context):
     common_labels = {
         "instance": "127.0.0.2:9273",
         "job": "metrics_generator:8123",
-    } | get_common_labels(context, timedelta(days=56))
+    } | get_common_labels(context, timedelta(days=21))
 
     labels_1 = {**common_labels, "vpn": "active_ravpn_tunnels"}
     labels_2 = {**common_labels, "vpn": "inactive_ravpn_tunnels"}
@@ -83,7 +83,7 @@ def step_impl(context):
     logging.info(f"Backfill took {(end_time - start_time)/60:.2f} minutes")
 
     # Calculate the start and end times
-    start_time = datetime.now() - timedelta(days=56)
+    start_time = datetime.now() - timedelta(days=21)
     end_time = datetime.now() - timedelta(days=1)
 
     # Convert to epoch seconds
@@ -117,8 +117,8 @@ def step_impl(context):
                 f"Active RAVPN data points: {num_data_points_active_ravpn}. Inactive RAVPN data points: {num_data_points_inactive_ravpn}"
             )
             if (
-                num_data_points_active_ravpn > 5100
-                and num_data_points_inactive_ravpn > 5100
+                num_data_points_active_ravpn > 2000
+                and num_data_points_inactive_ravpn > 2000
             ):
                 ingestion_end_time = time.time()
                 logging.info(
@@ -177,7 +177,7 @@ def is_device_present_with_ra_vpn_data(context):
 
 def generate_timeseries():
     # Trend component
-    trend = LinearTrend(coefficient=0.05, time_unit=timedelta(hours=0.95), flat_base=5)
+    trend = LinearTrend(coefficient=0.1, time_unit=timedelta(hours=0.95), flat_base=5)
 
     # Seasonality component
     seasonality = DailySeasonality(
@@ -206,7 +206,7 @@ def generate_timeseries():
     # Generate timeseries
     time_points = datetime_range(
         granularity=timedelta(minutes=15),
-        start_time=datetime.now() - timedelta(days=56),
+        start_time=datetime.now() - timedelta(days=21),
         end_time=datetime.now(),
     )
     ts_values = timeseries.generate(time_points=time_points)
