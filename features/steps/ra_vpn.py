@@ -126,6 +126,8 @@ def step_impl(context):
                 )
                 success = True
                 break
+        else:
+            logging.info("No data points found")
 
         time.sleep(90)
         # TODO: Ingest live data till backfill data is available
