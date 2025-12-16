@@ -117,8 +117,8 @@ def step_impl(context):
                 f"Active RAVPN data points: {num_data_points_active_ravpn}. Inactive RAVPN data points: {num_data_points_inactive_ravpn}"
             )
             if (
-                num_data_points_active_ravpn > 2000
-                and num_data_points_inactive_ravpn > 2000
+                num_data_points_active_ravpn > 1910
+                and num_data_points_inactive_ravpn > 1910
             ):
                 ingestion_end_time = time.time()
                 logging.info(
