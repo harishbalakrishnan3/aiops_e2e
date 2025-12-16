@@ -90,7 +90,7 @@ def step_impl(context):
     start_time_epoch = int(start_time.timestamp())
     end_time_epoch = int(end_time.timestamp())
 
-    query = f'?query=vpn{{uuid="{context.scenario_to_device_map[context.scenario].device_record_uid}"}}&start={start_time_epoch}&end={end_time_epoch}&step=5m'
+    query = f'?query=vpn{{uuid="{context.scenario_to_device_map[context.scenario].device_record_uid}"}}&start={start_time_epoch}&end={end_time_epoch}&step=15m'
 
     endpoint = get_endpoints().PROMETHEUS_RANGE_QUERY_URL + query
 
