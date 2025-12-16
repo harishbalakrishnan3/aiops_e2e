@@ -175,7 +175,7 @@ def is_device_present_with_ra_vpn_data(context):
 
 def generate_timeseries():
     # Trend component
-    trend = LinearTrend(coefficient=0.02, time_unit=timedelta(hours=0.95), flat_base=5)
+    trend = LinearTrend(coefficient=0.05, time_unit=timedelta(hours=0.95), flat_base=5)
 
     # Seasonality component
     seasonality = DailySeasonality(
