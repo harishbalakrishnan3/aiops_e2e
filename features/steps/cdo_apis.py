@@ -37,6 +37,13 @@ def get_insights(query_params=None, fields=None):
     return get(url, print_body=False)
 
 
+def delete_insight_by_uid(uid):
+    """Delete a specific insight by its UID"""
+    url = f"{endpoints.INSIGHTS_URL}/{uid}"
+    logging.info(f"Deleting insight with UID: {uid}")
+    delete(url)
+
+
 def delete_insights(limit=200, offset=0):
     url = endpoints.INSIGHTS_URL
     params = [f"limit={limit}", f"offset={offset}"]
@@ -113,6 +120,15 @@ def verify_insight_type_and_state(context, insight_type, state):
                         f"Failed to fetch complete insight for uid: {insight_uid}"
                     )
                     context.matched_insight = insight  # fallback to partial insight
+
+                # Track this insight for cleanup after the scenario
+                if (
+                    hasattr(context, "scenario_insights")
+                    and insight_uid not in context.scenario_insights
+                ):
+                    context.scenario_insights.append(insight_uid)
+                    logging.debug(f"Tracking insight {insight_uid} for cleanup")
+
                 return True
             else:
                 logging.debug(

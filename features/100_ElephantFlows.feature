@@ -27,7 +27,7 @@ Feature: Elephant flows
         | metric_name           | label_values                                                                                                                                                                                                          | start_value | end_value      | start_spike_minute | spike_duration_minutes |
         | asp_drops             | asp_drops=snort-busy-not-fp, description=snort instance busy not in full proxy, instance=127.0.0.3:9273, job=10.10.5.139                                                                                              | 270000      | 270000         | 0                  | 1                      |
       Then verify if an ELEPHANT_FLOW insight with state RESOLVED is created with a timeout of 10 minute(s)
-
+      Then the insights created in this scenario are cleared
 
   Scenario: Test Elephant Flow alerts with enhanced flows and applications for standalone device
     Then push timeseries for 4 minute(s) of which send last 2 minute(s) of timeseries in live mode

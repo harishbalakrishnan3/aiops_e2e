@@ -209,6 +209,9 @@ def before_scenario(context, scenario):
     except:
         context.scenario = ScenarioEnum.UNKNOWN_SCENARIO
 
+    # Initialize a list to track insights created during this scenario
+    context.scenario_insights = []
+
 
 def after_scenario(context, scenario):
     if scenario.status == Status.failed:

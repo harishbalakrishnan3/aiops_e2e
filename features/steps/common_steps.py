@@ -18,6 +18,7 @@ from features.steps.env import Path, get_endpoints
 from features.steps.metrics import batch_remote_write
 from features.steps.cdo_apis import (
     delete_all_insights,
+    delete_insight_by_uid,
     post,
     verify_insight_type_and_state,
     get_insights,
@@ -44,6 +45,25 @@ from mockseries.seasonality.sinusoidal_seasonality import SinusoidalSeasonality
 @step("the insights are cleared")
 def step_impl(context):
     delete_all_insights()
+
+
+@step("the insights created in this scenario are cleared")
+def step_impl(context):
+    """Delete only the insights that were created during the current scenario"""
+    if hasattr(context, "scenario_insights") and context.scenario_insights:
+        logging.info(
+            f"Cleaning up {len(context.scenario_insights)} insight(s) created during this scenario"
+        )
+        for insight_uid in context.scenario_insights:
+            try:
+                delete_insight_by_uid(insight_uid)
+                logging.info(f"Successfully deleted insight: {insight_uid}")
+            except Exception as e:
+                logging.warning(f"Failed to delete insight {insight_uid}: {e}")
+        # Clear the list after cleanup
+        context.scenario_insights = []
+    else:
+        logging.info("No insights to clean up in this scenario")
 
 
 @step("verify if an {insight_type} insight with state {insight_state} is created")
