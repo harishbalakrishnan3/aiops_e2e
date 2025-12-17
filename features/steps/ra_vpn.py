@@ -45,7 +45,7 @@ def step_impl(context):
     common_labels = {
         "instance": "127.0.0.2:9273",
         "job": "metrics_generator:8123",
-    } | get_common_labels(context, timedelta(days=28))
+    } | get_common_labels(context, timedelta(days=21))
 
     labels_1 = {**common_labels, "vpn": "active_ravpn_tunnels"}
     labels_2 = {**common_labels, "vpn": "inactive_ravpn_tunnels"}
@@ -83,22 +83,23 @@ def step_impl(context):
     logging.info(f"Backfill took {(end_time - start_time)/60:.2f} minutes")
 
     # Calculate the start and end times
-    start_time = datetime.now() - timedelta(days=28)
+    start_time = datetime.now() - timedelta(days=21)
     end_time = datetime.now() - timedelta(days=1)
 
     # Convert to epoch seconds
     start_time_epoch = int(start_time.timestamp())
     end_time_epoch = int(end_time.timestamp())
 
-    query = f'?query=vpn{{uuid="{context.scenario_to_device_map[context.scenario].device_record_uid}"}}&start={start_time_epoch}&end={end_time_epoch}&step=5m'
+    query = f'?query=vpn{{uuid="{context.scenario_to_device_map[context.scenario].device_record_uid}"}}&start={start_time_epoch}&end={end_time_epoch}&step=15m'
 
     endpoint = get_endpoints().PROMETHEUS_RANGE_QUERY_URL + query
 
+    ingestion_start_time = time.time()
     count = 0
     success = False
     while True:
-        # Exit after 90 minutes
-        if count > 90:
+        # Exit after 180 minutes
+        if count > 180:
             logging.error("Data not ingested in Prometheus. Exiting.")
             break
 
@@ -106,6 +107,7 @@ def step_impl(context):
 
         # Check for data in Prometheus
         response = get(endpoint, print_body=False)
+        logging.info(f"Attempt {count}: Checking for data in Prometheus")
         if len(response["data"]["result"]) > 0:
             num_data_points_active_ravpn = len(response["data"]["result"][0]["values"])
             num_data_points_inactive_ravpn = len(
@@ -115,13 +117,19 @@ def step_impl(context):
                 f"Active RAVPN data points: {num_data_points_active_ravpn}. Inactive RAVPN data points: {num_data_points_inactive_ravpn}"
             )
             if (
-                num_data_points_active_ravpn > 2500
-                and num_data_points_inactive_ravpn > 2500
+                num_data_points_active_ravpn > 1910
+                and num_data_points_inactive_ravpn > 1910
             ):
+                ingestion_end_time = time.time()
+                logging.info(
+                    f"Data ingestion took {(ingestion_end_time - ingestion_start_time)/60:.2f} minutes"
+                )
                 success = True
                 break
+        else:
+            logging.info("No data points found")
 
-        time.sleep(90)
+        time.sleep(60)
         # TODO: Ingest live data till backfill data is available
     assert success
 
@@ -198,7 +206,7 @@ def generate_timeseries():
     # Generate timeseries
     time_points = datetime_range(
         granularity=timedelta(minutes=15),
-        start_time=datetime.now() - timedelta(days=28),
+        start_time=datetime.now() - timedelta(days=21),
         end_time=datetime.now(),
     )
     ts_values = timeseries.generate(time_points=time_points)

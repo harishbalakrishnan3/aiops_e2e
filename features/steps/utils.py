@@ -2,6 +2,7 @@ import copy
 import logging
 import time
 from datetime import datetime, timedelta
+import re
 from typing import List
 
 import pandas as pd
@@ -234,15 +235,37 @@ def find_device_available_for_data_ingestion(
     raise Exception("No device available for ingestion")
 
 
+def parse_step_to_seconds(step_str: str) -> int:
+    """Convert Prometheus step string (e.g., '5m', '1h', '30s') to seconds."""
+    match = re.match(r"(\d+)([smhd])", step_str)
+    if not match:
+        raise ValueError(f"Invalid step format: {step_str}")
+    value, unit = int(match.group(1)), match.group(2)
+    multipliers = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+    return value * multipliers[unit]
+
+
 def is_data_present(query: str, duration: timedelta, step="5m"):
-    # Calculate the start and end times
+    MAX_PROMETHEUS_DATAPOINTS = 11000
+
     start_time = datetime.now() - duration
     end_time = datetime.now()
 
-    # Convert to epoch seconds
+    total_duration_seconds = int(duration.total_seconds())
+    step_seconds = parse_step_to_seconds(step)
+
+    expected_datapoints = total_duration_seconds // step_seconds
+
+    if expected_datapoints > MAX_PROMETHEUS_DATAPOINTS:
+        step_seconds = total_duration_seconds // MAX_PROMETHEUS_DATAPOINTS
+        step_minutes = round(step_seconds / 60 / 10) * 10
+        step = f"{step_minutes}m"
+        logging.info(
+            f"Query would return {expected_datapoints} datapoints, increasing step to {step}"
+        )
+
     start_time_epoch = int(start_time.timestamp())
     end_time_epoch = int(end_time.timestamp())
-
     endpoint = f"{get_endpoints().PROMETHEUS_RANGE_QUERY_URL}?{query}&start={start_time_epoch}&end={end_time_epoch}&step={step}"
     logging.info(endpoint)
     response = get(endpoint, print_body=False)
