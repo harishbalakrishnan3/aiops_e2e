@@ -3,7 +3,7 @@
 .venv
 .cursor
 .windsurf
-utils/*_historical_data.txt
+utils/*.txt
 utils/*_data/*
 utils/mimirtool
 utils/promtool
