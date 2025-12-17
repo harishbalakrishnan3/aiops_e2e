@@ -13,10 +13,11 @@ class Device(BaseModel):
 
 class ScenarioEnum(str, Enum):
     ELEPHANTFLOW_LEGACY = "Test Elephant Flow alerts with multiple flows and applications for standalone device"
-    ELEPHANTFLOW_LEGACY_HA = (
-        "Test Elephant Flow alerts with multiple flows and applications for HA device"
+    ELEPHANTFLOW_ENHANCED = "Test Elephant Flow alerts with enhanced flows and applications for standalone device"
+    ELEPHANTFLOW_ENHANCED_HA = (
+        "Test Elephant Flow alerts with enhanced flows and applications for HA device"
     )
-    ELEPHANTFLOW_LEGACY_CLUSTER = "Test Elephant Flow alerts with multiple flows and applications for cluster device"
+    ELEPHANTFLOW_ENHANCED_CLUSTER = "Test Elephant Flow alerts with enhanced flows and applications for cluster device"
     CORRELATION_CPU_LINA = (
         "Push data and test correlation alerts for CPU_LINA_THRESHOLD_BREACH"
     )

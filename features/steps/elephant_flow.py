@@ -46,8 +46,19 @@ def step_impl(context, filename):
     for flow in flows:
         del flow["stats"]
 
-    if flows != expected_flow_data:
-        logging.error(f"Expected flow data {expected_flow_data} but got {flows}")
+    def flow_sort_key(flow):
+        return (
+            flow["sourceIp"],
+            flow["sourcePort"],
+            flow["destinationIp"],
+            flow["destinationPort"],
+        )
+
+    flows_sorted = sorted(flows, key=flow_sort_key)
+    expected_sorted = sorted(expected_flow_data, key=flow_sort_key)
+
+    if flows_sorted != expected_sorted:
+        logging.error(f"Expected flow data {expected_sorted} but got {flows_sorted}")
         assert False, "Flow data mismatch"
 
 
@@ -113,9 +124,7 @@ def step_impl(context, timeout):
                 logging.info(
                     f"updatedTime changed: {previous_updated_time} → {current_updated_time}"
                 )
-                logging.info(
-                    f"Insight successfully UPDATED after {attempt * poll_interval} seconds"
-                )
+                logging.info(f"Insight successfully UPDATED after {time_diff} seconds")
                 logging.info(f"Update delta: {time_diff} seconds")
 
                 # Update context with fresh insight

@@ -1,0 +1,82 @@
+{
+    "flows": [
+      {
+        "sourceIp": "10.10.0.98",
+        "destinationIp": "20.20.0.98",
+        "sourcePort": 56324,
+        "destinationPort": 3306,
+        "protocol": 6,
+        "application": {
+          "id": 747,
+          "name": "MySQL",
+          "description": "A relational database management system (RDBMS) that runs as a server providing multi-user access to a number of databases.",
+          "riskIndex": 1
+        }
+      },
+      {
+        "sourceIp": "10.10.0.98",
+        "destinationIp": "20.20.0.98",
+        "sourcePort": 56326,
+        "destinationPort": 3306,
+        "protocol": 6,
+        "application": {
+          "id": 747,
+          "name": "MySQL",
+          "description": "A relational database management system (RDBMS) that runs as a server providing multi-user access to a number of databases.",
+          "riskIndex": 1
+        }
+      },
+      {
+        "sourceIp": "10.10.0.98",
+        "destinationIp": "20.20.0.98",
+        "sourcePort": 56370,
+        "destinationPort": 443,
+        "protocol": 6,
+        "application": {
+          "id": 47,
+          "name": "Backblaze",
+          "description": "Online backup tool for Windows and Mac users.",
+          "riskIndex": 3
+        }
+      },
+      {
+        "sourceIp": "10.10.0.98",
+        "destinationIp": "20.20.0.98",
+        "sourcePort": 56372,
+        "destinationPort": 443,
+        "protocol": 6,
+        "application": {
+          "id": 47,
+          "name": "Backblaze",
+          "description": "Online backup tool for Windows and Mac users.",
+          "riskIndex": 3
+        }
+      },
+      {
+        "sourceIp": "10.10.0.98",
+        "destinationIp": "20.20.0.98",
+        "sourcePort": 56380,
+        "destinationPort": 443,
+        "protocol": 6,
+        "application": {
+          "id": 3878,
+          "name": "CrashPlan",
+          "description": "Cloud-based enterprise backup solution.",
+          "riskIndex": 1
+        }
+      },
+      {
+        "sourceIp": "10.10.0.98",
+        "destinationIp": "20.20.0.98",
+        "sourcePort": 56426,
+        "destinationPort": 443,
+        "protocol": 6,
+        "application": {
+          "id": 6009,
+          "name": "Cloudload",
+          "description": "It provides audio and video streaming.",
+          "riskIndex": 5
+        }
+      }
+    ]
+}
