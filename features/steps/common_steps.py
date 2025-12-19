@@ -255,6 +255,7 @@ def step_impl(context, module_name, method):
         post(
             get_endpoints().AI_OPS_ANOMALY_DETECTION_FORECAST_TRIGGER_URL,
             json.dumps(payload),
+            expected_return_code=201,
         )
 
 
