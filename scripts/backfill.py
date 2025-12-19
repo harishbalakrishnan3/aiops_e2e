@@ -75,6 +75,64 @@ def format_labels(labels_dict):
     return ",".join([f'{k}="{v}"' for k, v in labels_dict.items()])
 
 
+def parse_step_size(step_size_str):
+    """
+    Parse step size string (e.g., '5m', '15m', '1h') to minutes.
+    If input is already an integer, return it as-is.
+
+    Args:
+        step_size_str: Step size string like '5m', '15m', '1h', '30s' or integer
+
+    Returns:
+        int: Step size in minutes
+
+    Raises:
+        ValueError: If format is invalid
+    """
+    import re
+
+    # If it's already an integer, return it
+    if isinstance(step_size_str, int):
+        return step_size_str
+
+    # Try to parse as integer directly
+    try:
+        return int(step_size_str)
+    except ValueError:
+        pass
+
+    # Parse string format like '5m', '1h'
+    match = re.match(r"^(\d+)([smhd])$", str(step_size_str).lower())
+    if not match:
+        raise ValueError(
+            f"Invalid step size format: '{step_size_str}'. "
+            "Expected format: <number><unit> where unit is s(econds), m(inutes), h(ours), or d(ays), "
+            "or just a number in minutes. Examples: 5m, 15m, 1h, 30s, or 5"
+        )
+
+    value = int(match.group(1))
+    unit = match.group(2)
+
+    # Convert to minutes
+    if unit == "s":
+        minutes = value / 60.0
+    elif unit == "m":
+        minutes = value
+    elif unit == "h":
+        minutes = value * 60
+    elif unit == "d":
+        minutes = value * 1440
+    else:
+        raise ValueError(f"Unsupported time unit: {unit}")
+
+    if minutes < 1:
+        raise ValueError(
+            f"Step size must be at least 1 minute, got {minutes} minutes from '{step_size_str}'"
+        )
+
+    return int(minutes)
+
+
 def generate_timeseries(
     start_time, end_time, trend_coefficient, granularity_minutes=15
 ):
@@ -254,9 +312,8 @@ def main():
     )
     parser.add_argument(
         "--step-size",
-        type=int,
-        default=5,
-        help="Time granularity in minutes for data points (default: 5)",
+        default="5m",
+        help="Time granularity for data points (default: 5m). Examples: 5m, 15m, 1h, or just 5 for 5 minutes",
     )
     parser.add_argument(
         "--output-dir",
@@ -265,6 +322,13 @@ def main():
     )
 
     args = parser.parse_args()
+
+    # Parse step size
+    try:
+        step_size_minutes = parse_step_size(args.step_size)
+    except ValueError as e:
+        logging.error(f"Invalid step-size: {e}")
+        sys.exit(1)
 
     start_time = datetime.fromtimestamp(args.start_epoch)
     end_time = datetime.fromtimestamp(args.end_epoch)
@@ -277,13 +341,13 @@ def main():
     logging.info(f"Metric: {args.metric_name}")
     logging.info(f"Labels: {args.labels}")
     logging.info(f"Trend coefficient: {args.trend_coefficient}")
-    logging.info(f"Step size: {args.step_size} minutes")
+    logging.info(f"Step size: {step_size_minutes} minutes")
 
     labels_dict = parse_labels(args.labels)
     labels_str = format_labels(labels_dict)
 
     ts_values, time_points = generate_timeseries(
-        start_time, end_time, args.trend_coefficient, args.step_size
+        start_time, end_time, args.trend_coefficient, step_size_minutes
     )
 
     timestamps = [int(tp.timestamp()) for tp in time_points]
