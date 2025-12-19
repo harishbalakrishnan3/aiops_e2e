@@ -7,7 +7,7 @@ Feature: Testing Anomaly Detection
       | conn_stats             | conn_stats=connection, description=in_use | 15          | 200       | 0                  | 20220                  | 6                        | 2         |
     Then trigger the CONNECTIONS forecasting workflow through API
     Then keep checking if conn_stats_threshold upper and lower bounds are ingested for 120 minute(s)
-#     There will be a break in data here (aprox 2hrs) while it backfills
+    # There will be a break in data here (aprox 2hrs) while it backfills
     Then push timeseries for 120 minute(s) of which send last 10 minute(s) of timeseries in live mode
       | metric_name            | label_values                              | start_value | end_value | start_spike_minute | spike_duration_minutes  |
       | conn_stats             | conn_stats=connection, description=in_use | 200         | 800       | 0                  | 110                     |
@@ -32,12 +32,12 @@ Feature: Testing Anomaly Detection
     Then trigger the THROUGHPUT forecasting workflow through API
     Then keep checking if interface_threshold upper and lower bounds are ingested for 120 minute(s)
     # There will be a break in data here (aprox 2hrs) while it backfills
-    Then push timeseries for 120 minute(s) of which send last 10 minute(s) of timeseries in live mode
-      | metric_name            | label_values                               | metric_type        |   start_value       | end_value     | start_spike_minute | spike_duration_minutes   |
-      | interface              | interface=all, description=input_bytes     | counter            |   106500            |  606500       | 0                  | 110                      |
-      | interface              | interface=all, description=output_bytes    | counter            |   106500            |  606500       | 0                  | 110                      |
-      | interface              | interface=all, description=input_packets   | counter            |   106500            |  606500       | 0                  | 110                      |
-      | interface              | interface=all, description=output_packets  | counter            |   106500            |  606500       | 0                  | 110                      |
+    Then push timeseries for 120 minute(s) of which send last 30 minute(s) of timeseries in live mode
+      | metric_name            | label_values                               | metric_type        |   start_value       | start_spike_minute | spike_duration_minutes   |
+      | interface              | interface=all, description=input_bytes     | exponential          |   80000000        |  0                  | 120                      |
+      | interface              | interface=all, description=output_bytes    | exponential          |   80000000        |  0                  | 120                      |
+      | interface              | interface=all, description=input_packets   | exponential           |   80000000       |  0                  | 120                      |
+      | interface              | interface=all, description=output_packets  | exponential           |   80000000       |  0                  | 120                      |
     Then verify if an THROUGHPUT_ANOMALY insight with state ACTIVE is created with a timeout of 10 minute(s)
     Then push timeseries for 2 minute(s) of which send last 2 minute(s) of timeseries in live mode
       | metric_name            | label_values                               | metric_type        |   start_value       | end_value     | start_spike_minute | spike_duration_minutes   |

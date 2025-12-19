@@ -4,6 +4,8 @@ import time
 import logging
 from typing import List
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 from mockseries.transition import LinearTransition
 from pydantic import BaseModel
 from features.model import ScenarioEnum, Device
@@ -233,6 +235,34 @@ def is_data_present(query: str, duration: timedelta, step="5m"):
     return len(response["data"]["result"]) > 0
 
 
+# Helper function that can be used to dump the graph of genertaed timeseries when debugging
+def _save_timeseries_graph(
+    generated_data: pd.DataFrame, metric_name: str, labels: dict
+):
+    """Save a graph of the timeseries data to a local file."""
+    import os
+
+    # Create directory if it doesn't exist
+    os.makedirs("./generated_graphs", exist_ok=True)
+
+    # Create a filename from metric name and labels
+    label_str = "_".join([f"{k}_{v}" for k, v in labels.items()])
+    filename = f"./generated_graphs/{metric_name}_{label_str}.png"
+
+    # Plot the data
+    plt.figure(figsize=(12, 6))
+    plt.plot(generated_data["ds"], generated_data["y"])
+    plt.xlabel("Time")
+    plt.ylabel("Value")
+    plt.title(f"{metric_name} - {label_str}")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(filename)
+    plt.close()
+
+    logging.info(f"Saved graph to {filename}")
+
+
 def generate_synthesized_ts_obj(
     context,
     metric_name: str,
@@ -276,11 +306,36 @@ def generate_synthesized_ts_obj(
     )
 
     if metric_type == "counter":
+        # For counter metrics, apply cumulative sum to convert gauge values to counter
         generated_data["y"] = generated_data["y"].cumsum()
+    elif metric_type == "exponential":
+        # For exponential metrics, implement quartic growth pattern to achieve steep upward slope
+        # that will be visible even after rate() calculation in Prometheus
+        # This type ignores end_value parameter
+        spike_start_idx = start_spike_minute
+        spike_end_idx = start_spike_minute + spike_duration_minutes
+
+        # Get the values array
+        y_values = generated_data["y"].values
+
+        # Generate time points for the spike window (0 to spike_duration_minutes)
+        t = np.arange(spike_duration_minutes)
+
+        # Apply quartic growth: y = start_value + coefficient * t^4
+        coefficient = 10000000000.0
+        y_values[spike_start_idx:spike_end_idx] = start_value + coefficient * (t**4)
+
+        # Update the dataframe
+        generated_data["y"] = y_values
+
+    # Uncomment to debug graphs of generated timeseries
+    # save_timeseries_graph(generated_data, metric_name, label_map)
+    label_map = get_label_map(context, label_string, timedelta(minutes=duration))
+
     return GeneratedData(
         metric_name=metric_name,
         values=generated_data,
-        labels=get_label_map(context, label_string, timedelta(minutes=duration)),
+        labels=label_map,
     )
 
 
