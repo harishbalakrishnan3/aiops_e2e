@@ -1,13 +1,20 @@
-.PHONY: help backfill backfill-21d backfill-7d backfill-1d test-backfill push-live push-live-30m push-live-1h push-live-2h test-push clean install format lint
+.PHONY: help backfill backfill-21d backfill-7d backfill-1d test-backfill push-live push-live-30m push-live-1h push-live-2h test-push test-scenarios test-scenarios-single clean install format lint
 
 METRIC_NAME ?= vpn
 LABELS ?= instance=127.0.0.2:9273,job=metrics_generator:8123
 TREND_COEFFICIENT ?= 0.1
+FLAT_BASE ?= 10
+STEP_SIZE ?= 5m
 DESCRIPTION ?= "Backfilled metric data"
 DURATION ?= 30
+SCENARIO ?= 1
 
 help:
 	@echo "Available targets:"
+	@echo ""
+	@echo "Test Scenarios (historical data validation):"
+	@echo "  make test-scenarios         - Run all test scenarios in dry-run mode (generate graphs only)"
+	@echo "  make test-scenarios-single  - Run single scenario (set SCENARIO=1-5, default: 1)"
 	@echo ""
 	@echo "Backfill Commands (historical data):"
 	@echo "  make backfill          - Run backfill with custom parameters"
@@ -33,12 +40,16 @@ help:
 	@echo "  METRIC_NAME=$(METRIC_NAME)"
 	@echo "  LABELS=$(LABELS)"
 	@echo "  TREND_COEFFICIENT=$(TREND_COEFFICIENT)"
+	@echo "  FLAT_BASE=$(FLAT_BASE)"
 	@echo "  DESCRIPTION=$(DESCRIPTION)"
 	@echo "  DURATION=$(DURATION) (for live push, in minutes)"
+	@echo "  SCENARIO=$(SCENARIO) (for test-scenarios-single, 1-5)"
 	@echo "  START_EPOCH=<calculated based on target> (for backfill)"
 	@echo "  END_EPOCH=<calculated based on target> (for backfill)"
 	@echo ""
 	@echo "Examples:"
+	@echo "  make test-scenarios"
+	@echo "  make test-scenarios-single SCENARIO=3 TREND_COEFFICIENT=0.5 FLAT_BASE=50"
 	@echo "  make backfill METRIC_NAME=cpu LABELS='cpu=lina_cp_avg,uuid=abc123' START_EPOCH=1702800000 END_EPOCH=1704614400"
 	@echo "  make backfill-21d METRIC_NAME=vpn LABELS='instance=127.0.0.2:9273,uuid=xyz789,vpn=active_ravpn_tunnels'"
 	@echo "  make push-live METRIC_NAME=cpu LABELS='cpu=lina_cp_avg,uuid=abc123' DURATION=60"
@@ -58,6 +69,26 @@ test-backfill:
 
 test-push:
 	poetry run python scripts/push_live_metrics.py --help
+
+test-scenarios:
+	@echo "Running all test scenarios in dry-run mode..."
+	poetry run python scripts/test_historical_scenarios.py \
+		--scenario all \
+		--metric-name $(METRIC_NAME) \
+		--labels "$(LABELS)" \
+		--step-size $(STEP_SIZE) \
+		--dry-run true
+
+test-scenarios-single:
+	@echo "Running scenario $(SCENARIO) in dry-run mode..."
+	poetry run python scripts/test_historical_scenarios.py \
+		--scenario $(SCENARIO) \
+		--metric-name $(METRIC_NAME) \
+		--labels "$(LABELS)" \
+		--trend-coefficient $(TREND_COEFFICIENT) \
+		--flat-base $(FLAT_BASE) \
+		--step-size $(STEP_SIZE) \
+		--dry-run true
 
 push-live:
 	@if [ -z "$(DURATION)" ]; then \
