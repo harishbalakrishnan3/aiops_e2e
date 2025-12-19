@@ -19,9 +19,9 @@ Feature: Correlation testing
       | Control Plane CPU           |
       | Connections                 |
       | Deployed ACE Configurations |
-    Then push timeseries for 2 minute(s) of which send last 2 minute(s) of timeseries in live mode
+    Then push timeseries for 6 minute(s) of which send last 6 minute(s) of timeseries in live mode
       | metric_name | label_values    | start_value | end_value | start_spike_minute | spike_duration_minutes |
-      | cpu         | cpu=lina_dp_avg | 60          | 60        | 0                  | 1                      |
+      | cpu         | cpu=lina_dp_avg | 60          | 60        | 0                  | 5                      |
     Then verify if an CPU_LINA_THRESHOLD_BREACH insight with state RESOLVED is created with a timeout of 10 minute(s)
 
   Scenario: Push data and test correlation alerts for CPU_SNORT_THRESHOLD_BREACH
@@ -43,9 +43,9 @@ Feature: Correlation testing
       | Snort Denied Flows          |
       | Connections                 |
       | Control Plane CPU           |
-    Then push timeseries for 2 minute(s) of which send last 2 minute(s) of timeseries in live mode
+    Then push timeseries for 6 minute(s) of which send last 6 minute(s) of timeseries in live mode
       | metric_name | label_values  | start_value | end_value | start_spike_minute | spike_duration_minutes |
-      | cpu         | cpu=snort_avg | 60          | 60        | 0                  | 1                      |
+      | cpu         | cpu=snort_avg | 60          | 60        | 0                  | 5                      |
     Then verify if an CPU_SNORT_THRESHOLD_BREACH insight with state RESOLVED is created with a timeout of 10 minute(s)
 
   Scenario: Push data and test correlation alerts for MEMORY_LINA_THRESHOLD_BREACH
@@ -61,9 +61,9 @@ Feature: Correlation testing
       | metric_name                 |
       | Connections                 |
       | Deployed ACE Configurations |
-    Then push timeseries for 2 minute(s) of which send last 2 minute(s) of timeseries in live mode
+    Then push timeseries for 6 minute(s) of which send last 6 minute(s) of timeseries in live mode
       | metric_name | label_values             | start_value | end_value | start_spike_minute | spike_duration_minutes |
-      | mem         | mem=used_percentage_lina | 60          | 60        | 0                  | 1                      |
+      | mem         | mem=used_percentage_lina | 60          | 60        | 0                  | 5                      |
     Then verify if an MEMORY_LINA_THRESHOLD_BREACH insight with state RESOLVED is created with a timeout of 10 minute(s)
 
   Scenario: Push data and test correlation alerts for MEMORY_SNORT_THRESHOLD_BREACH
@@ -77,9 +77,9 @@ Feature: Correlation testing
     Then confirm correlated metrics
       | metric_name                 |
       | Connections                 |
-    Then push timeseries for 2 minute(s) of which send last 2 minute(s) of timeseries in live mode
+    Then push timeseries for 6 minute(s) of which send last 6 minute(s) of timeseries in live mode
       | metric_name | label_values              | start_value | end_value | start_spike_minute | spike_duration_minutes |
-      | mem         | mem=used_percentage_snort | 60          | 60        | 0                  | 1                      |
+      | mem         | mem=used_percentage_snort | 60          | 60        | 0                  | 5                      |
     Then verify if an MEMORY_SNORT_THRESHOLD_BREACH insight with state RESOLVED is created with a timeout of 10 minute(s)
 
   Scenario: Push data and test multi correlation alerts for HA active device
@@ -120,12 +120,12 @@ Feature: Correlation testing
     Then confirm correlated metrics
       | metric_name                 |
       | Connections                 |
-    Then push timeseries for 2 minute(s) of which send last 2 minute(s) of timeseries in live mode
+    Then push timeseries for 6 minute(s) of which send last 6 minute(s) of timeseries in live mode
       | metric_name | label_values                  | start_value | end_value | start_spike_minute  | spike_duration_minutes |
-      | cpu         | cpu=lina_dp_avg               | 60          | 60        | 0                   | 1                      |
-      | cpu         | cpu=snort_avg                 | 60          | 60        | 0                   | 1                      |
-      | mem         | mem=used_percentage_lina      | 60          | 60        | 0                   | 1                      |
-      | mem         | mem=used_percentage_snort     | 60          | 60        | 0                   | 1                      |
+      | cpu         | cpu=lina_dp_avg               | 60          | 60        | 0                   | 5                      |
+      | cpu         | cpu=snort_avg                 | 60          | 60        | 0                   | 5                      |
+      | mem         | mem=used_percentage_lina      | 60          | 60        | 0                   | 5                      |
+      | mem         | mem=used_percentage_snort     | 60          | 60        | 0                   | 5                      |
     Then verify if an CPU_LINA_THRESHOLD_BREACH insight with state RESOLVED is created with a timeout of 10 minute(s)
 
   Scenario: Push data and test multi correlation alerts for CLUSTER control device
@@ -167,10 +167,10 @@ Feature: Correlation testing
     Then confirm correlated metrics
       | metric_name                 |
       | Connections                 |
-    Then push timeseries for 2 minute(s) of which send last 2 minute(s) of timeseries in live mode
+    Then push timeseries for 6 minute(s) of which send last 6 minute(s) of timeseries in live mode
       | metric_name | label_values                  | start_value | end_value | start_spike_minute  | spike_duration_minutes |
-      | cpu         | cpu=lina_dp_avg               | 60          | 60        | 0                   | 1                      |
-      | cpu         | cpu=snort_avg                 | 60          | 60        | 0                   | 1                      |
-      | mem         | mem=used_percentage_lina      | 60          | 60        | 0                   | 1                      |
-      | mem         | mem=used_percentage_snort     | 60          | 60        | 0                   | 1                      |
+      | cpu         | cpu=lina_dp_avg               | 60          | 60        | 0                   | 5                      |
+      | cpu         | cpu=snort_avg                 | 60          | 60        | 0                   | 5                      |
+      | mem         | mem=used_percentage_lina      | 60          | 60        | 0                   | 5                      |
+      | mem         | mem=used_percentage_snort     | 60          | 60        | 0                   | 5                      |
     Then verify if an CPU_LINA_THRESHOLD_BREACH insight with state RESOLVED is created with a timeout of 10 minute(s)
