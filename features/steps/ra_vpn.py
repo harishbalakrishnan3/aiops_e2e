@@ -90,9 +90,7 @@ def step_impl(context):
     start_time_epoch = int(start_time.timestamp())
     end_time_epoch = int(end_time.timestamp())
 
-    query = f'?query=vpn{{uuid="{context.scenario_to_device_map[context.scenario].device_record_uid}"}}&start={start_time_epoch}&end={end_time_epoch}&step=15m'
-
-    endpoint = get_endpoints().PROMETHEUS_RANGE_QUERY_URL + query
+    query_string = f'vpn{{uuid="{context.scenario_to_device_map[context.scenario].device_record_uid}"}}'
 
     ingestion_start_time = time.time()
     count = 0
@@ -105,21 +103,19 @@ def step_impl(context):
 
         count += 1
 
-        # Check for data in Prometheus
-        response = get(endpoint, print_body=False)
+        # Check for data in Prometheus using pagination-aware function
         logging.info(f"Attempt {count}: Checking for data in Prometheus")
-        if len(response["data"]["result"]) > 0:
-            num_data_points_active_ravpn = len(response["data"]["result"][0]["values"])
-            num_data_points_inactive_ravpn = len(
-                response["data"]["result"][1]["values"]
-            )
+        series_data_points = _get_total_data_points(
+            start_time_epoch, end_time_epoch, query_string, step_size="1m"
+        )
+
+        if series_data_points:
+            total_data_points = sum(series_data_points.values())
             logging.info(
-                f"Active RAVPN data points: {num_data_points_active_ravpn}. Inactive RAVPN data points: {num_data_points_inactive_ravpn}"
+                f"Total RAVPN data points across all series: {total_data_points}"
             )
-            if (
-                num_data_points_active_ravpn > 1910
-                and num_data_points_inactive_ravpn > 1910
-            ):
+
+            if total_data_points > 55000:
                 ingestion_end_time = time.time()
                 logging.info(
                     f"Data ingestion took {(ingestion_end_time - ingestion_start_time)/60:.2f} minutes"
@@ -156,6 +152,79 @@ def step_impl(context):
         "attributes": {},
     }
     post(get_endpoints().TRIGGER_MANAGER_URL, json.dumps(payload))
+
+
+def _get_total_data_points(start_epoch, end_epoch, query_string, step_size="1m"):
+    """
+    Get total data points from Prometheus, handling the 11000 data point limit per query.
+
+    Args:
+        start_epoch: Start time in epoch seconds
+        end_epoch: End time in epoch seconds
+        query_string: The Prometheus query string (e.g., 'vpn{uuid="..."}')
+        step_size: Query step size (default: "1m"). Supports format like "1m", "5m", "1h"
+
+    Returns:
+        Dictionary with series names as keys and their total data point counts as values.
+        Returns empty dict if no data found.
+    """
+    # Parse step_size to seconds
+    step_mapping = {"s": 1, "m": 60, "h": 3600}
+    step_value = int(step_size[:-1])
+    step_unit = step_size[-1]
+    step_seconds = step_value * step_mapping.get(step_unit, 60)
+
+    # Calculate total duration and expected data points
+    total_duration = end_epoch - start_epoch
+    expected_points = (total_duration // step_seconds) + 1
+
+    # Maximum data points per query (use 10000 to be safe, limit is 11000)
+    max_points_per_query = 10000
+
+    # Calculate chunk size if we need to split
+    if expected_points <= max_points_per_query:
+        # Single query is sufficient
+        chunks = [(start_epoch, end_epoch)]
+    else:
+        # Split into multiple chunks
+        chunk_duration = max_points_per_query * step_seconds
+        chunks = []
+        current_start = start_epoch
+        while current_start < end_epoch:
+            current_end = min(current_start + chunk_duration, end_epoch)
+            chunks.append((current_start, current_end))
+            current_start = current_end
+
+    logging.info(
+        f"Query will be split into {len(chunks)} chunk(s) to handle {expected_points} expected data points"
+    )
+
+    # Execute queries for each chunk and aggregate results
+    series_data_points = {}
+
+    for idx, (chunk_start, chunk_end) in enumerate(chunks):
+        query = f"?query={query_string}&start={chunk_start}&end={chunk_end}&step={step_size}"
+        endpoint = get_endpoints().PROMETHEUS_RANGE_QUERY_URL + query
+
+        response = get(endpoint, print_body=False)
+
+        if len(response["data"]["result"]) > 0:
+            for series in response["data"]["result"]:
+                metric_labels = series.get("metric", {})
+                series_key = metric_labels.get("vpn", "unknown")
+
+                num_points = len(series["values"])
+                series_data_points[series_key] = (
+                    series_data_points.get(series_key, 0) + num_points
+                )
+
+            logging.info(
+                f"Chunk {idx + 1}/{len(chunks)}: Retrieved data points for {len(response['data']['result'])} series"
+            )
+        else:
+            logging.info(f"Chunk {idx + 1}/{len(chunks)}: No data points found")
+
+    return series_data_points
 
 
 def is_device_present_with_ra_vpn_data(context):
@@ -205,7 +274,7 @@ def generate_timeseries():
 
     # Generate timeseries
     time_points = datetime_range(
-        granularity=timedelta(minutes=15),
+        granularity=timedelta(minutes=1),
         start_time=datetime.now() - timedelta(days=21),
         end_time=datetime.now(),
     )
