@@ -1,4 +1,4 @@
-.PHONY: help backfill backfill-21d backfill-7d backfill-1d test-backfill push-live push-live-30m push-live-1h push-live-2h test-push test-scenarios test-scenarios-single clean install format lint
+.PHONY: help backfill backfill-21d backfill-7d backfill-1d test-backfill push-live push-live-30m push-live-1h push-live-2h test-push test-scenarios test-scenarios-single test-scenarios-2weeks clean install format lint
 
 METRIC_NAME ?= vpn
 LABELS ?= instance=127.0.0.2:9273,job=metrics_generator:8123
@@ -14,7 +14,8 @@ help:
 	@echo ""
 	@echo "Test Scenarios (historical data validation):"
 	@echo "  make test-scenarios         - Run all test scenarios in dry-run mode (generate graphs only)"
-	@echo "  make test-scenarios-single  - Run single scenario (set SCENARIO=1-5, default: 1)"
+	@echo "  make test-scenarios-single  - Run single scenario (set SCENARIO=1-6, default: 1)"
+	@echo "  make test-scenarios-2weeks  - Run 2-week scenario (Scenario 6) for trend experiments"
 	@echo ""
 	@echo "Backfill Commands (historical data):"
 	@echo "  make backfill          - Run backfill with custom parameters"
@@ -83,6 +84,17 @@ test-scenarios-single:
 	@echo "Running scenario $(SCENARIO) in dry-run mode..."
 	poetry run python scripts/test_historical_scenarios.py \
 		--scenario $(SCENARIO) \
+		--metric-name $(METRIC_NAME) \
+		--labels "$(LABELS)" \
+		--trend-coefficient $(TREND_COEFFICIENT) \
+		--flat-base $(FLAT_BASE) \
+		--step-size $(STEP_SIZE) \
+		--dry-run true
+
+test-scenarios-2weeks:
+	@echo "Running 2-week scenario (Scenario 6) in dry-run mode..."
+	poetry run python scripts/test_historical_scenarios.py \
+		--scenario 6 \
 		--metric-name $(METRIC_NAME) \
 		--labels "$(LABELS)" \
 		--trend-coefficient $(TREND_COEFFICIENT) \
