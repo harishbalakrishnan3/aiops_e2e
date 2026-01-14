@@ -1,6 +1,4 @@
 #!/bin/bash
-
-# Exit on error
 set -e
 
 # Infer OS and architecture
@@ -10,6 +8,20 @@ ARCH="$(uname -m)"
 echo "Detected OS: $OS"
 echo "Detected architecture: $ARCH"
 
+# Helper: run a command as root (sudo if available, else direct if already root)
+run_as_root() {
+  if command -v sudo >/dev/null 2>&1; then
+    sudo "$@"
+  elif [ "$(id -u)" -eq 0 ]; then
+    "$@"
+  else
+    echo "Error: need root privileges to run: $*"
+    echo "This environment has no sudo and is not running as root."
+    echo "Fix: install 'tar' in the base image / runner, or run this job as root."
+    exit 1
+  fi
+}
+
 # Ensure tar is installed
 if ! command -v tar >/dev/null 2>&1; then
   echo "tar not found, attempting to install..."
@@ -17,18 +29,19 @@ if ! command -v tar >/dev/null 2>&1; then
   case "$OS" in
     linux)
       if command -v apt-get >/dev/null 2>&1; then
-        sudo apt-get update
-        sudo apt-get install -y tar
+        run_as_root apt-get update
+        run_as_root apt-get install -y tar
       elif command -v yum >/dev/null 2>&1; then
-        sudo yum install -y tar
+        run_as_root yum install -y tar
       elif command -v apk >/dev/null 2>&1; then
-        apk add --no-cache tar
+        run_as_root apk add --no-cache tar
       else
         echo "Unsupported Linux distribution: cannot install tar automatically"
         exit 1
       fi
       ;;
     darwin)
+      # macOS usually has bsdtar; but keep this here for completeness
       if command -v brew >/dev/null 2>&1; then
         brew install gnu-tar
       else
@@ -60,24 +73,18 @@ URL="https://github.com/prometheus/prometheus/releases/download/v${VERSION}/prom
 DOWNLOAD_DIR="./prometheus_download"
 TARBALL="prometheus-${VERSION}.${OS}-${ARCH}.tar.gz"
 
-# Download Prometheus binary
 echo "Downloading Prometheus binary from $URL..."
 mkdir -p "$DOWNLOAD_DIR"
 curl -L "$URL" -o "${DOWNLOAD_DIR}/${TARBALL}"
 
-# Extract the binary
 echo "Extracting Prometheus binary..."
 tar -xzf "${DOWNLOAD_DIR}/${TARBALL}" -C "$DOWNLOAD_DIR"
 
-# Copy binaries to the project directory
 cp "${DOWNLOAD_DIR}/prometheus-${VERSION}.${OS}-${ARCH}/prometheus" .
 cp "${DOWNLOAD_DIR}/prometheus-${VERSION}.${OS}-${ARCH}/promtool" .
 
-# Give execute permissions
 chmod +x prometheus promtool
 
-# Cleanup
 rm -rf "$DOWNLOAD_DIR"
 
-# Output
 echo "Prometheus and promtool have been downloaded and extracted successfully"
