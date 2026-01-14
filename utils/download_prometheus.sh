@@ -9,51 +9,18 @@ echo "Detected OS: $OS"
 echo "Detected architecture: $ARCH"
 
 # Helper: run a command as root (sudo if available, else direct if already root)
-run_as_root() {
-  if command -v sudo >/dev/null 2>&1; then
-    sudo "$@"
-  elif [ "$(id -u)" -eq 0 ]; then
-    "$@"
-  else
-    echo "Error: need root privileges to run: $*"
-    echo "This environment has no sudo and is not running as root."
-    echo "Fix: install 'tar' in the base image / runner, or run this job as root."
+# Check if tar is available
+HAS_TAR=true
+if ! command -v tar >/dev/null 2>&1; then
+  echo "tar not found, will use Python as fallback..."
+  HAS_TAR=false
+  
+  # Check if Python is available
+  if ! command -v python3 >/dev/null 2>&1 && ! command -v python >/dev/null 2>&1; then
+    echo "Error: neither tar nor python is available"
+    echo "Please install either tar or python in the base image"
     exit 1
   fi
-}
-
-# Ensure tar is installed
-if ! command -v tar >/dev/null 2>&1; then
-  echo "tar not found, attempting to install..."
-
-  case "$OS" in
-    linux)
-      if command -v apt-get >/dev/null 2>&1; then
-        run_as_root apt-get update
-        run_as_root apt-get install -y tar
-      elif command -v yum >/dev/null 2>&1; then
-        run_as_root yum install -y tar
-      elif command -v apk >/dev/null 2>&1; then
-        run_as_root apk add --no-cache tar
-      else
-        echo "Unsupported Linux distribution: cannot install tar automatically"
-        exit 1
-      fi
-      ;;
-    darwin)
-      # macOS usually has bsdtar; but keep this here for completeness
-      if command -v brew >/dev/null 2>&1; then
-        brew install gnu-tar
-      else
-        echo "Homebrew not found. Please install tar manually."
-        exit 1
-      fi
-      ;;
-    *)
-      echo "Unsupported OS for automatic tar installation: $OS"
-      exit 1
-      ;;
-  esac
 fi
 
 # Map architecture to what Prometheus uses
@@ -78,7 +45,23 @@ mkdir -p "$DOWNLOAD_DIR"
 curl -L "$URL" -o "${DOWNLOAD_DIR}/${TARBALL}"
 
 echo "Extracting Prometheus binary..."
-tar -xzf "${DOWNLOAD_DIR}/${TARBALL}" -C "$DOWNLOAD_DIR"
+if [ "$HAS_TAR" = true ]; then
+  tar -xzf "${DOWNLOAD_DIR}/${TARBALL}" -C "$DOWNLOAD_DIR"
+else
+  # Use Python to extract tar.gz
+  PYTHON_CMD=$(command -v python3 || command -v python)
+  $PYTHON_CMD - <<EOF
+import tarfile
+import os
+
+tarball_path = "${DOWNLOAD_DIR}/${TARBALL}"
+extract_dir = "${DOWNLOAD_DIR}"
+
+with tarfile.open(tarball_path, "r:gz") as tar:
+    tar.extractall(path=extract_dir)
+print(f"Extracted {tarball_path} using Python")
+EOF
+fi
 
 cp "${DOWNLOAD_DIR}/prometheus-${VERSION}.${OS}-${ARCH}/prometheus" .
 cp "${DOWNLOAD_DIR}/prometheus-${VERSION}.${OS}-${ARCH}/promtool" .
