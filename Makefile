@@ -113,6 +113,7 @@ push-live:
 		--labels "$(LABELS)" \
 		--duration $(DURATION) \
 		--trend-coefficient $(TREND_COEFFICIENT) \
+		--flat-base $(FLAT_BASE) \
 		--description $(DESCRIPTION)
 
 push-live-30m:
@@ -122,6 +123,7 @@ push-live-30m:
 		--labels "$(LABELS)" \
 		--duration 30 \
 		--trend-coefficient $(TREND_COEFFICIENT) \
+		--flat-base $(FLAT_BASE) \
 		--description $(DESCRIPTION)
 
 push-live-1h:
@@ -131,6 +133,7 @@ push-live-1h:
 		--labels "$(LABELS)" \
 		--duration 60 \
 		--trend-coefficient $(TREND_COEFFICIENT) \
+		--flat-base $(FLAT_BASE) \
 		--description $(DESCRIPTION)
 
 push-live-2h:
@@ -140,6 +143,7 @@ push-live-2h:
 		--labels "$(LABELS)" \
 		--duration 120 \
 		--trend-coefficient $(TREND_COEFFICIENT) \
+		--flat-base $(FLAT_BASE) \
 		--description $(DESCRIPTION)
 
 backfill:
@@ -159,6 +163,7 @@ backfill:
 		--start-epoch $(START_EPOCH) \
 		--end-epoch $(END_EPOCH) \
 		--trend-coefficient $(TREND_COEFFICIENT) \
+		--flat-base $(FLAT_BASE) \
 		--description $(DESCRIPTION)
 
 backfill-21d:
@@ -171,6 +176,7 @@ backfill-21d:
 		--start-epoch $$START_EPOCH \
 		--end-epoch $$END_EPOCH \
 		--trend-coefficient $(TREND_COEFFICIENT) \
+		--flat-base $(FLAT_BASE) \
 		--description $(DESCRIPTION)
 
 backfill-7d:
@@ -183,6 +189,7 @@ backfill-7d:
 		--start-epoch $$START_EPOCH \
 		--end-epoch $$END_EPOCH \
 		--trend-coefficient $(TREND_COEFFICIENT) \
+		--flat-base $(FLAT_BASE) \
 		--description $(DESCRIPTION)
 
 backfill-1d:
@@ -195,6 +202,7 @@ backfill-1d:
 		--start-epoch $$START_EPOCH \
 		--end-epoch $$END_EPOCH \
 		--trend-coefficient $(TREND_COEFFICIENT) \
+		--flat-base $(FLAT_BASE) \
 		--description $(DESCRIPTION)
 
 clean:

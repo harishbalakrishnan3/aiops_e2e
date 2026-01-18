@@ -134,11 +134,11 @@ def parse_step_size(step_size_str):
 
 
 def generate_timeseries(
-    start_time, end_time, trend_coefficient, granularity_minutes=15
+    start_time, end_time, trend_coefficient, granularity_minutes=15, flat_base=5
 ):
     """Generate timeseries with specified trend coefficient and default seasonality/noise."""
     trend = LinearTrend(
-        coefficient=trend_coefficient, time_unit=timedelta(hours=1), flat_base=5
+        coefficient=trend_coefficient, time_unit=timedelta(hours=1), flat_base=flat_base
     )
 
     seasonality = DailySeasonality(
@@ -316,6 +316,12 @@ def main():
         help="Time granularity for data points (default: 5m). Examples: 5m, 15m, 1h, or just 5 for 5 minutes",
     )
     parser.add_argument(
+        "--flat-base",
+        type=float,
+        default=5.0,
+        help="Flat base value for trend generation (default: 5.0)",
+    )
+    parser.add_argument(
         "--output-dir",
         default=None,
         help="Output directory for generated files (default: project utils directory)",
@@ -341,13 +347,14 @@ def main():
     logging.info(f"Metric: {args.metric_name}")
     logging.info(f"Labels: {args.labels}")
     logging.info(f"Trend coefficient: {args.trend_coefficient}")
+    logging.info(f"Flat base: {args.flat_base}")
     logging.info(f"Step size: {step_size_minutes} minutes")
 
     labels_dict = parse_labels(args.labels)
     labels_str = format_labels(labels_dict)
 
     ts_values, time_points = generate_timeseries(
-        start_time, end_time, args.trend_coefficient, step_size_minutes
+        start_time, end_time, args.trend_coefficient, step_size_minutes, args.flat_base
     )
 
     timestamps = [int(tp.timestamp()) for tp in time_points]

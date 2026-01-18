@@ -44,7 +44,9 @@ python3 scripts/backfill.py \
   --start-epoch <unix_timestamp> \
   --end-epoch <unix_timestamp> \
   --trend-coefficient <float> \
+  [--flat-base <float>] \
   [--description "<description>"] \
+  [--step-size <size>] \
   [--output-dir <directory>]
 ```
 
@@ -57,7 +59,9 @@ python3 scripts/backfill.py \
 | `--start-epoch` | Yes | - | Backfill start time as Unix epoch timestamp |
 | `--end-epoch` | Yes | - | Backfill end time as Unix epoch timestamp |
 | `--trend-coefficient` | No | 0.1 | Trend coefficient for timeseries generation |
+| `--flat-base` | No | 5.0 | Flat base value for trend generation |
 | `--description` | No | "Backfilled metric data" | Metric description |
+| `--step-size` | No | 5m | Time granularity (e.g., '5m', '15m', '1h') |
 | `--output-dir` | No | `<project>/utils` | Output directory for generated files |
 
 ### Label Naming Rules
@@ -88,6 +92,7 @@ python3 scripts/backfill.py \
   --start-epoch $START_EPOCH \
   --end-epoch $END_EPOCH \
   --trend-coefficient 0.1 \
+  --flat-base 5.0 \
   --description "Active RAVPN tunnels"
 ```
 
@@ -102,18 +107,20 @@ python3 scripts/backfill.py \
   --start-epoch $START_EPOCH \
   --end-epoch $END_EPOCH \
   --trend-coefficient 0.5 \
+  --flat-base 10.0 \
   --description "CPU utilization"
 ```
 
 ## Default Timeseries Pattern
 
 The script generates timeseries with:
-- **Trend**: Linear trend with configurable coefficient (default 0.1)
-  - `time_unit=timedelta(hours=0.95)`
-  - `flat_base=5`
+- **Trend**: Linear trend with configurable parameters
+  - `coefficient` (default: 0.1, configurable via `--trend-coefficient`)
+  - `time_unit=timedelta(hours=1)`
+  - `flat_base` (default: 5.0, configurable via `--flat-base`)
 - **Seasonality**: Daily seasonality pattern matching the test features
 - **Noise**: Gaussian noise with `mean=0`, `std=3`, `random_seed=42`
-- **Granularity**: 15-minute intervals
+- **Granularity**: Configurable via `--step-size` (default: 5m, can use 5m, 15m, 1h, etc.)
 
 ## Output
 

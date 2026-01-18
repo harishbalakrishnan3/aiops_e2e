@@ -39,6 +39,7 @@ python3 scripts/push_live_metrics.py \
   --labels "<key1>=<value1>,<key2>=<value2>" \
   --duration <minutes> \
   --trend-coefficient <float> \
+  [--flat-base <float>] \
   [--description "<description>"]
 ```
 
@@ -50,6 +51,7 @@ python3 scripts/push_live_metrics.py \
 | `--labels` | Yes | - | Label key-value pairs in format 'key1=value1,key2=value2' |
 | `--duration` | Yes | - | Duration in minutes to push metrics (1 datapoint per minute) |
 | `--trend-coefficient` | No | 0.1 | Trend coefficient for timeseries generation |
+| `--flat-base` | No | 5.0 | Flat base value for trend generation |
 | `--description` | No | "Live metric data" | Metric description |
 
 ### Label Naming Rules
@@ -94,15 +96,17 @@ poetry run python scripts/push_live_metrics.py \
   --labels "conn_stats=connection,description=in_use,tenant_uuid=abc123,uuid=device-xyz" \
   --duration 60 \
   --trend-coefficient 0.3 \
+  --flat-base 10.0 \
   --description "Connection statistics"
 ```
 
 ## Default Timeseries Pattern
 
 The script generates timeseries with:
-- **Trend**: Linear trend with configurable coefficient (default 0.1)
+- **Trend**: Linear trend with configurable parameters
+  - `coefficient` (default: 0.1, configurable via `--trend-coefficient`)
   - `time_unit=timedelta(hours=0.95)`
-  - `flat_base=5`
+  - `flat_base` (default: 5.0, configurable via `--flat-base`)
 - **Seasonality**: Daily seasonality pattern matching the test features
 - **Noise**: Gaussian noise with `mean=0`, `std=3`, `random_seed=42`
 - **Granularity**: 1-minute intervals (1 datapoint per minute)

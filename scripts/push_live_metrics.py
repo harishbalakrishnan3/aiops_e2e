@@ -86,10 +86,12 @@ def create_gauge(name: str, description: str):
     return gauge
 
 
-def generate_timeseries(start_time, end_time, trend_coefficient):
+def generate_timeseries(start_time, end_time, trend_coefficient, flat_base=5):
     """Generate timeseries with specified trend coefficient and default seasonality/noise."""
     trend = LinearTrend(
-        coefficient=trend_coefficient, time_unit=timedelta(hours=0.95), flat_base=5
+        coefficient=trend_coefficient,
+        time_unit=timedelta(hours=0.95),
+        flat_base=flat_base,
     )
 
     seasonality = DailySeasonality(
@@ -166,7 +168,7 @@ def instant_remote_write(
 
 
 def push_live_metrics(
-    metric_name, labels, duration_minutes, trend_coefficient, description
+    metric_name, labels, duration_minutes, trend_coefficient, description, flat_base=5
 ):
     """Generate and push live metrics to Prometheus."""
     start_time = datetime.now()
@@ -177,10 +179,11 @@ def push_live_metrics(
     logging.info(f"Metric: {metric_name}")
     logging.info(f"Labels: {labels}")
     logging.info(f"Trend coefficient: {trend_coefficient}")
+    logging.info(f"Flat base: {flat_base}")
 
     # Generate timeseries data
     ts_values, time_points = generate_timeseries(
-        start_time, end_time, trend_coefficient
+        start_time, end_time, trend_coefficient, flat_base
     )
 
     logging.info(f"Generated {len(ts_values)} datapoints")
@@ -255,6 +258,12 @@ def main():
         default="Live metric data",
         help="Metric description (default: 'Live metric data')",
     )
+    parser.add_argument(
+        "--flat-base",
+        type=float,
+        default=5.0,
+        help="Flat base value for trend generation (default: 5.0)",
+    )
 
     args = parser.parse_args()
 
@@ -270,6 +279,7 @@ def main():
         args.duration,
         args.trend_coefficient,
         args.description,
+        args.flat_base,
     )
 
 
