@@ -138,7 +138,7 @@ def step_impl(context, duration, live_duration):
     live_duration = int(live_duration)
     for row in context.table:
         start_value = float(row["start_value"])
-        end_value = float(row["end_value"])
+        end_value = float(row.get("end_value", 0))
         start_spike_minute = int(row["start_spike_minute"])
         spike_duration_minutes = int(row["spike_duration_minutes"])
         label_string = row["label_values"]
