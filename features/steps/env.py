@@ -19,7 +19,12 @@ HELIOS_ASSISTANT_ID = 343
 class Endpoints:
     def __init__(self):
         load_dotenv()
-        self.BASE_URL = "https://edge.{}.cdo.cisco.com".format(os.getenv("ENV").lower())
+        env = os.getenv("ENV").lower()
+        if(env == "prod"):
+            self.BASE_URL = "https://www.defenseorchestrator.com"
+        else:
+            self.BASE_URL = "https://edge.{}.cdo.cisco.com".format(env)
+
         self.INSIGHTS_URL = self.BASE_URL + "/api/platform/ai-ops-insights/v1/insights"
         self.TENANT_ONBOARD_V2_URL = (
             self.BASE_URL + "/api/platform/ai-ops-orchestrator/v2/tenant/onboard"
