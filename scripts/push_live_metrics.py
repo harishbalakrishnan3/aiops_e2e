@@ -129,6 +129,10 @@ def get_base_url(env):
     env_lower = env.lower()
     if env_lower in ("scale", "staging", "ci"):
         return f"https://edge.{env_lower}.cdo.cisco.com"
+    elif env_lower == "us":
+        return "https://www.defenseorchestrator.com"
+    elif env_lower == "eu":
+        return "https://www.defenseorchestrator.eu"
     else:
         return f"https://www.{env_lower}.cdo.cisco.com"
 
