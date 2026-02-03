@@ -171,19 +171,24 @@ def generate_timeseries(
     return ts_values, time_points
 
 
-def get_remote_write_config():
+def get_base_url(env):
+    """Get base URL based on environment."""
+    env_lower = env.lower()
+    if env_lower in ("scale", "staging", "ci"):
+        return f"https://edge.{env_lower}.cdo.cisco.com"
+    else:
+        return f"https://www.{env_lower}.cdo.cisco.com"
+
+
+def get_remote_write_config(env):
     """Fetch remote write configuration from GCM."""
     load_dotenv()
-
-    env = os.getenv("ENV")
-    if not env:
-        raise ValueError("ENV environment variable not set in .env file")
 
     cdo_token = os.getenv("CDO_TOKEN")
     if not cdo_token:
         raise ValueError("CDO_TOKEN environment variable not set in .env file")
 
-    base_url = f"https://edge.{env.lower()}.cdo.cisco.com"
+    base_url = get_base_url(env)
     gcm_stack_url = (
         f"{base_url}/api/platform/ai-ops-tenant-services/v2/timeseries-stack"
     )
@@ -326,6 +331,11 @@ def main():
         default=None,
         help="Output directory for generated files (default: project utils directory)",
     )
+    parser.add_argument(
+        "--env",
+        default="staging",
+        help="Environment (e.g., 'scale', 'staging', 'ci' for edge URLs, others for prod URLs). Default: staging",
+    )
 
     args = parser.parse_args()
 
@@ -376,8 +386,9 @@ def main():
         args.description,
     )
 
+    logging.info(f"Environment: {args.env}")
     logging.info("Fetching remote write configuration...")
-    remote_write_config = get_remote_write_config()
+    remote_write_config = get_remote_write_config(args.env)
 
     run_backfill(remote_write_config, utils_dir, data_block_dir, historical_data_file)
 

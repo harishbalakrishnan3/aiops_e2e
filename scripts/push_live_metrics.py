@@ -124,19 +124,24 @@ def generate_timeseries(start_time, end_time, trend_coefficient, flat_base=5):
     return ts_values, time_points
 
 
-def get_remote_write_config():
+def get_base_url(env):
+    """Get base URL based on environment."""
+    env_lower = env.lower()
+    if env_lower in ("scale", "staging", "ci"):
+        return f"https://edge.{env_lower}.cdo.cisco.com"
+    else:
+        return f"https://www.{env_lower}.cdo.cisco.com"
+
+
+def get_remote_write_config(env):
     """Get remote write configuration."""
     load_dotenv()
-
-    env = os.getenv("ENV")
-    if not env:
-        raise ValueError("ENV environment variable not set in .env file")
 
     cdo_token = os.getenv("CDO_TOKEN")
     if not cdo_token:
         raise ValueError("CDO_TOKEN environment variable not set in .env file")
 
-    base_url = f"https://edge.{env.lower()}.cdo.cisco.com"
+    base_url = get_base_url(env)
     data_ingest_url = f"{base_url}/api/platform/ai-ops-data-ingest/v2/healthmetrics"
 
     return {
@@ -168,7 +173,13 @@ def instant_remote_write(
 
 
 def push_live_metrics(
-    metric_name, labels, duration_minutes, trend_coefficient, description, flat_base=5
+    metric_name,
+    labels,
+    duration_minutes,
+    trend_coefficient,
+    description,
+    env,
+    flat_base=5,
 ):
     """Generate and push live metrics to Prometheus."""
     start_time = datetime.now()
@@ -180,6 +191,7 @@ def push_live_metrics(
     logging.info(f"Labels: {labels}")
     logging.info(f"Trend coefficient: {trend_coefficient}")
     logging.info(f"Flat base: {flat_base}")
+    logging.info(f"Environment: {env}")
 
     # Generate timeseries data
     ts_values, time_points = generate_timeseries(
@@ -190,7 +202,7 @@ def push_live_metrics(
     logging.info("=" * 80)
 
     # Get remote write config
-    config = get_remote_write_config()
+    config = get_remote_write_config(env)
     exporter = PrometheusRemoteWriteMetricsExporter(
         endpoint=config["endpoint"],
         headers={"Authorization": f"Bearer {config['token']}"},
@@ -264,6 +276,11 @@ def main():
         default=5.0,
         help="Flat base value for trend generation (default: 5.0)",
     )
+    parser.add_argument(
+        "--env",
+        default="staging",
+        help="Environment (e.g., 'scale', 'staging', 'ci' for edge URLs, others for prod URLs). Default: staging",
+    )
 
     args = parser.parse_args()
 
@@ -279,6 +296,7 @@ def main():
         args.duration,
         args.trend_coefficient,
         args.description,
+        args.env,
         args.flat_base,
     )
 
