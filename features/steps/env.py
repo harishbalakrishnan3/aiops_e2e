@@ -30,6 +30,8 @@ class Endpoints:
             self.BASE_URL = "https://www.aus.cdo.cisco.com"
         elif env == "produae":
             self.BASE_URL = "https://www.uae.cdo.cisco.com"
+        elif env == "prodin":
+            self.BASE_URL = "https://www.in.cdo.cisco.com"
         else:
             self.BASE_URL = "https://edge.{}.cdo.cisco.com".format(env)
 
