@@ -9,7 +9,6 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
-from mockseries.noise import GaussianNoise
 from mockseries.seasonality import DailySeasonality
 from mockseries.trend import LinearTrend
 from mockseries.utils import datetime_range
@@ -111,9 +110,7 @@ def generate_timeseries(start_time, end_time, trend_coefficient, flat_base=5):
         }
     )
 
-    noise = GaussianNoise(mean=0, std=3, random_seed=42)
-
-    timeseries = trend + seasonality + noise
+    timeseries = trend + seasonality
 
     time_points = datetime_range(
         granularity=timedelta(minutes=1),

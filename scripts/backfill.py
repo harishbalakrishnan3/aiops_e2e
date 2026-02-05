@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import json
 import logging
 import os
 import subprocess
@@ -12,7 +11,6 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 from jinja2 import Template
-from mockseries.noise import GaussianNoise
 from mockseries.seasonality import DailySeasonality
 from mockseries.trend import LinearTrend
 from mockseries.utils import datetime_range
@@ -158,9 +156,7 @@ def generate_timeseries(
         }
     )
 
-    noise = GaussianNoise(mean=0, std=3, random_seed=42)
-
-    timeseries = trend + seasonality + noise
+    timeseries = trend + seasonality
 
     time_points = datetime_range(
         granularity=timedelta(minutes=granularity_minutes),
