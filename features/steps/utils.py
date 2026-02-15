@@ -494,11 +494,11 @@ def convert_to_backfill_data(
 
 def compute_onboard_status_ignoring_fmc_export(response):
     """
-    Computes the effective onboard status by ignoring FMC_METRIC_EXPORT task.
+    Computes the effective onboard status by ignoring FMC_METRIC_EXPORT and METRIC_BACKFILL tasks.
 
     Returns the computed overall status based on:
     - timeSeriesStore status
-    - dataSources status (excluding FMC_METRIC_EXPORT task)
+    - dataSources status (excluding FMC_METRIC_EXPORT and METRIC_BACKFILL tasks)
     - applications status
 
     Valid statuses:
@@ -515,15 +515,15 @@ def compute_onboard_status_ignoring_fmc_export(response):
     if "timeSeriesStore" in response:
         statuses.append(response["timeSeriesStore"]["status"])
 
-    # Check dataSources (excluding FMC_METRIC_EXPORT)
+    # Check dataSources (excluding FMC_METRIC_EXPORT and METRIC_BACKFILL)
     if "dataSources" in response:
         for data_source in response["dataSources"]:
-            # Check tasks, excluding FMC_METRIC_EXPORT
+            # Check tasks, excluding FMC_METRIC_EXPORT and METRIC_BACKFILL
             if "tasks" in data_source:
                 filtered_tasks = [
                     task
                     for task in data_source["tasks"]
-                    if task["name"] != "FMC_METRIC_EXPORT"
+                    if task["name"] not in ["FMC_METRIC_EXPORT", "METRIC_BACKFILL"]
                 ]
                 if filtered_tasks:
                     # Collect statuses from filtered tasks

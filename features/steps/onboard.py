@@ -23,10 +23,10 @@ def step_impl(context, action):
 @step("the tenant onboard state is {state}")
 def step_impl(context, state):
     response = get_onboard_status()
-    # Compute status ignoring FMC_METRIC_EXPORT which can take hours
+    # Compute status ignoring FMC_METRIC_EXPORT and METRIC_BACKFILL which can take hours
     computed_status = compute_onboard_status_ignoring_fmc_export(response)
     logging.info(
-        f"Computed onboard status (ignoring FMC_METRIC_EXPORT): {computed_status}"
+        f"Computed onboard status (ignoring FMC_METRIC_EXPORT and METRIC_BACKFILL): {computed_status}"
     )
     assert_that(computed_status == state)
 
