@@ -34,6 +34,7 @@ from features.steps.utils import (
 )
 from time_series_generator import (
     generate_timeseries,
+    NoiseConfig,
     TimeConfig,
     SeasonalityConfig,
     SeriesConfig,
@@ -374,6 +375,7 @@ def generate_data_for_input(context, duration_delta: timedelta) -> List[Generate
                 amplitude=amplitude,
                 period=timedelta(hours=seasonality_period_hours),
             ),
+            noise_config=NoiseConfig(enable=False),
         )
 
         if metric_type == "counter":
@@ -393,7 +395,7 @@ def generate_data_for_input(context, duration_delta: timedelta) -> List[Generate
                     "period_hours": seasonality_period_hours,
                 },
                 "trend": f"{start_value} -> {end_value} over {spike_duration_minutes}m (start at {start_spike_minute}m)",
-                "noise": True,
+                "noise": False,
             },
         )
 

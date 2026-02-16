@@ -11,13 +11,12 @@ import numpy as np
 import pandas as pd
 from behave import *
 from darts.utils.timeseries_generation import (
-    gaussian_timeseries,
     linear_timeseries,
     sine_timeseries,
 )
 from features.steps.cdo_apis import get, post
 from features.steps.env import get_endpoints, Path
-from features.steps.utils import get_common_labels
+from features.steps.utils import get_common_labels, write_timeseries_yaml
 from shared.step_utils import parse_step_to_seconds
 
 t = Template(
@@ -47,6 +46,16 @@ def step_impl(context):
 
     labels_1 = {**common_labels, "vpn": "active_ravpn_tunnels"}
     labels_2 = {**common_labels, "vpn": "inactive_ravpn_tunnels"}
+
+    # Write YAML debug output for both series
+    ts_df = pd.DataFrame({"ds": [tp.timestamp() for tp in time_points], "y": ts_values})
+    ts_features = {
+        "trend": "linear 5 -> ~58 over 21 days",
+        "seasonality": "daily sine, amplitude=9.25, offset=10.25",
+        "noise": False,
+    }
+    write_timeseries_yaml(context, metric_name, labels_1, ts_df, ts_features)
+    write_timeseries_yaml(context, metric_name, labels_2, ts_df, ts_features)
     description = "Currently active and inactive RAVPN tunnels"
     labels_1 = ",".join([f'{k}="{v}"' for k, v in labels_1.items()])
     labels_2 = ",".join([f'{k}="{v}"' for k, v in labels_2.items()])
@@ -227,6 +236,9 @@ def generate_timeseries():
     total_minutes = int((end_time - start_time).total_seconds() / 60)
     freq = "60s"
 
+    # Strip tz for darts (xarray doesn't support tz-aware timestamps)
+    start_time_naive = start_time.tz_localize(None)
+
     # Trend component: linear from flat_base=5, increasing by 0.1 per 0.95 hours
     # Over 21 days: end_value = 5 + 0.1 * (21*24/0.95) = 5 + 53.05 ≈ 58
     total_hours = 21 * 24
@@ -234,7 +246,7 @@ def generate_timeseries():
     trend = linear_timeseries(
         start_value=5,
         end_value=end_trend_value,
-        start=start_time,
+        start=start_time_naive,
         length=total_minutes,
         freq=freq,
     )
@@ -248,25 +260,18 @@ def generate_timeseries():
         value_amplitude=9.25,
         value_y_offset=10.25,
         value_phase=np.pi,  # Phase shift to approximate original daily pattern
-        start=start_time,
-        length=total_minutes,
-        freq=freq,
-    )
-
-    # Noise component
-    noise = gaussian_timeseries(
-        mean=0,
-        std=3,
-        start=start_time,
+        start=start_time_naive,
         length=total_minutes,
         freq=freq,
     )
 
     # Combine components
-    combined = trend + seasonality + noise
+    combined = trend + seasonality
 
     # Convert to the format expected by callers: (ts_values, time_points)
+    # Re-localize to UTC for correct epoch conversion
     pdf = combined.pd_dataframe()
+    pdf.index = pdf.index.tz_localize("UTC")
     ts_values = pdf.iloc[:, 0].values
     time_points = list(pdf.index.to_pydatetime())
     return ts_values, time_points
