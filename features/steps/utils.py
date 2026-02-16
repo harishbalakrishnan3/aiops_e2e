@@ -375,6 +375,7 @@ def start_polling(query: str, retry_count: int, retry_frequency_seconds: int) ->
             break
 
         count += 1
+        logging.info(f"Attempt {count}/{retry_count}: Checking for data in Prometheus")
 
         # Check for data in Prometheus
         response = get(endpoint, print_body=False)
