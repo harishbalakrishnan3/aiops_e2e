@@ -44,20 +44,35 @@ def _load_scenario_prerequisites() -> dict:
 
 
 def _filter_devices_by_type(devices: list, device_filter: str) -> list:
-    """Filter devices based on the device_filter from prerequisites config."""
-    if device_filter == "standalone":
-        return [d for d in devices if d.container_type is None]
-    elif device_filter == "HA_PAIR":
-        return [d for d in devices if d.container_type == "HA_PAIR"]
-    elif device_filter == "CLUSTER":
-        return [d for d in devices if d.container_type == "CLUSTER"]
-    elif device_filter == "ravpn":
+    """Filter devices based on the device_filter from prerequisites config.
+
+    For non-ravpn filters, devices with RAVPN enabled are deprioritised so they
+    remain available for the RAVPN scenario (which needs a fresh device every
+    daily Jenkins run over a 21-day backfill window).
+    """
+    if device_filter == "ravpn":
         return [d for d in devices if d.ra_vpn_enabled]
+
+    if device_filter == "standalone":
+        candidates = [d for d in devices if d.container_type is None]
+    elif device_filter == "HA_PAIR":
+        candidates = [d for d in devices if d.container_type == "HA_PAIR"]
+    elif device_filter == "CLUSTER":
+        candidates = [d for d in devices if d.container_type == "CLUSTER"]
     else:
         logging.warning(
             f"Unknown device_filter '{device_filter}', returning all devices"
         )
-        return devices
+        candidates = devices
+
+    # Prefer non-RAVPN devices to reserve RAVPN-capable ones for RAVPN scenarios
+    non_ravpn = [d for d in candidates if not d.ra_vpn_enabled]
+    if non_ravpn:
+        return non_ravpn
+    logging.warning(
+        "No non-RAVPN devices available, falling back to RAVPN-capable devices"
+    )
+    return candidates
 
 
 class GeneratedData(BaseModel, arbitrary_types_allowed=True):
