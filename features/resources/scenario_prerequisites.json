@@ -1,0 +1,66 @@
+{
+  "ELEPHANTFLOW_LEGACY": {
+    "device_filter": "standalone",
+    "query": "query=efd_cpu_usage{{uuid=\"{uuid}\"}}"
+  },
+  "ELEPHANTFLOW_ENHANCED": {
+    "device_filter": "standalone",
+    "query": "query=efd_cpu_usage{{uuid=\"{uuid}\"}}"
+  },
+  "ELEPHANTFLOW_ENHANCED_HA": {
+    "device_filter": "HA_PAIR",
+    "query": "query=efd_cpu_usage{{uuid=\"{uuid}\"}}"
+  },
+  "ELEPHANTFLOW_ENHANCED_CLUSTER": {
+    "device_filter": "CLUSTER",
+    "query": "query=efd_cpu_usage{{uuid=\"{uuid}\"}}"
+  },
+  "CORRELATION_CPU_LINA": {
+    "device_filter": "standalone",
+    "query": "query=cpu{{cpu=~\"lina_cp_avg|lina_dp_avg\", uuid=\"{uuid}\"}} or rate(interface{{description=~\"input_bytes|input_packets\", interface=\"all\", uuid=\"{uuid}\"}}[4m]) or conn_stats{{conn_stats=\"connection\", description=\"in_use\", uuid=\"{uuid}\"}} or deployed_configuration{{deployed_configuration=\"number_of_ACEs\", uuid=\"{uuid}\"}} or sum(rate(interface{{description=\"drop_packets\", uuid=\"{uuid}\"}}[4m])) by (uuid, description)"
+  },
+  "CORRELATION_CPU_SNORT": {
+    "device_filter": "standalone",
+    "query": "query=cpu{{cpu=~\"snort_avg|lina_cp_avg\", uuid=\"{uuid}\"}} or rate(interface{{description=~\"input_bytes|input_packets|input_avg_packet_size\", interface=\"all\", uuid=\"{uuid}\"}}[4m]) or conn_stats{{conn_stats=\"connection\", description=\"in_use\", uuid=\"{uuid}\"}} or snort{{description=\"denied_flow_events\", snort=\"stats\", uuid=\"{uuid}\"}} or snort3_perfstats{{snort3_perfstats=\"concurrent_elephant_flows\", uuid=\"{uuid}\"}} or rate(asp_drops{{asp_drops=\"snort-busy-not-fp\", uuid=\"{uuid}\"}}[4m])"
+  },
+  "CORRELATION_MEM_LINA": {
+    "device_filter": "standalone",
+    "query": "query=mem{{mem=\"used_percentage_lina\", uuid=\"{uuid}\"}} or rate(interface{{description=~\"input_bytes|input_packets\", interface=\"all\", uuid=\"{uuid}\"}}[4m]) or conn_stats{{conn_stats=\"connection\", description=\"in_use\", uuid=\"{uuid}\"}} or deployed_configuration{{deployed_configuration=\"number_of_ACEs\", uuid=\"{uuid}\"}}"
+  },
+  "CORRELATION_MEM_SNORT": {
+    "device_filter": "standalone",
+    "query": "query=mem{{mem=\"used_percentage_snort\", uuid=\"{uuid}\"}} or rate(interface{{description=~\"input_bytes|input_packets\", interface=\"all\", uuid=\"{uuid}\"}}[4m]) or conn_stats{{conn_stats=\"connection\", description=\"in_use\", uuid=\"{uuid}\"}}"
+  },
+  "CORRELATION_HA_ACTIVE": {
+    "device_filter": "HA_PAIR",
+    "query": "query=cpu{{cpu=~\"lina_cp_avg|snort_avg|lina_dp_avg\", uuid=\"{uuid}\"}} or rate(interface{{description=~\"input_bytes|input_packets\", interface=\"all\", uuid=\"{uuid}\"}}[4m]) or conn_stats{{conn_stats=\"connection\", description=\"in_use\", uuid=\"{uuid}\"}} or deployed_configuration{{deployed_configuration=\"number_of_ACEs\", uuid=\"{uuid}\"}} or sum(rate(interface{{description=\"drop_packets\", uuid=\"{uuid}\"}}[4m])) by (uuid, description) or snort{{description=\"denied_flow_events\", snort=\"stats\", uuid=\"{uuid}\"}} or snort3_perfstats{{snort3_perfstats=\"concurrent_elephant_flows\", uuid=\"{uuid}\"}} or rate(asp_drops{{asp_drops=\"snort-busy-not-fp\", uuid=\"{uuid}\"}}[4m])or mem{{mem=\"used_percentage_lina\", uuid=\"{uuid}\"}} or mem{{mem=\"used_percentage_snort\", uuid=\"{uuid}\"}}"
+  },
+  "CORRELATION_CLUSTER_CONTROL": {
+    "device_filter": "CLUSTER",
+    "query": "query=cpu{{cpu=~\"lina_cp_avg|snort_avg|lina_dp_avg\", uuid=\"{uuid}\"}} or rate(interface{{description=~\"input_bytes|input_packets\", interface=\"all\", uuid=\"{uuid}\"}}[4m]) or conn_stats{{conn_stats=\"connection\", description=\"in_use\", uuid=\"{uuid}\"}} or deployed_configuration{{deployed_configuration=\"number_of_ACEs\", uuid=\"{uuid}\"}} or sum(rate(interface{{description=\"drop_packets\", uuid=\"{uuid}\"}}[4m])) by (uuid, description) or snort{{description=\"denied_flow_events\", snort=\"stats\", uuid=\"{uuid}\"}} or snort3_perfstats{{snort3_perfstats=\"concurrent_elephant_flows\", uuid=\"{uuid}\"}} or rate(asp_drops{{asp_drops=\"snort-busy-not-fp\", uuid=\"{uuid}\"}}[4m])or mem{{mem=\"used_percentage_lina\", uuid=\"{uuid}\"}} or mem{{mem=\"used_percentage_snort\", uuid=\"{uuid}\"}}"
+  },
+  "RAVPN_FORECAST": {
+    "device_filter": "ravpn",
+    "query": "query=vpn{{uuid=\"{uuid}\"}}"
+  },
+  "ANOMALY_CONNECTION": {
+    "device_filter": "standalone",
+    "query": "query=conn_stats{{uuid=\"{uuid}\"}}"
+  },
+  "ANOMALY_CONNECTION_INTERMITTENT_SPIKES": {
+    "device_filter": "standalone",
+    "query": "query=conn_stats{{uuid=\"{uuid}\"}}"
+  },
+  "ANOMALY_THROUGHPUT": {
+    "device_filter": "standalone",
+    "query": "query=interface{{interface=\"all\", description=\"input_bytes\", uuid=\"{uuid}\"}} or interface{{interface=\"all\", description=\"output_bytes\", uuid=\"{uuid}\"}}"
+  },
+  "CONNECTIONS_ANOMALY_STANDALONE": {
+    "device_filter": "standalone",
+    "query": "query=conn_stats{{uuid=\"{uuid}\"}}"
+  },
+  "CONNECTIONS_ANOMALY_HA": {
+    "device_filter": "HA_PAIR",
+    "query": "query=conn_stats{{uuid=\"{uuid}\"}}"
+  }
+}

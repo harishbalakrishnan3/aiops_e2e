@@ -1,16 +1,15 @@
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone
 
 import numpy as np
 import pandas as pd
 
-from mockseries.noise import RedNoise
-from mockseries.transition.transition import Transition
-from mockseries.trend import Switch
-from mockseries.seasonality.seasonality import Seasonality
-from mockseries.seasonality.sinusoidal_seasonality import SinusoidalSeasonality
-from mockseries.utils import datetime_range
-from mockseries.noise.noise import Noise
-from typing import List, Optional
+from darts.utils.timeseries_generation import (
+    constant_timeseries,
+    gaussian_timeseries,
+    linear_timeseries,
+    sine_timeseries,
+)
+from typing import Any, List, Optional
 
 from pydantic import BaseModel
 
@@ -18,14 +17,14 @@ from pydantic import BaseModel
 class SeriesConfig(BaseModel, arbitrary_types_allowed=True):
     start_value: float
     end_value: float
-    start_time: datetime = datetime.now()
+    start_time: datetime = datetime.now(timezone.utc)
     duration: timedelta
     step: timedelta = timedelta(minutes=1)
 
 
 class TransitionConfig(BaseModel, arbitrary_types_allowed=True):
     start_time: datetime
-    transition: Optional[Transition] = None
+    transition_window: timedelta = timedelta(minutes=1)
 
 
 class TimeConfig(BaseModel, arbitrary_types_allowed=True):
@@ -35,12 +34,14 @@ class TimeConfig(BaseModel, arbitrary_types_allowed=True):
 
 class NoiseConfig(BaseModel, arbitrary_types_allowed=True):
     enable: bool
-    noise_list: List[Noise] = []
+    mean: float = 0.0
+    std: float = 2.0
 
 
 class SeasonalityConfig(BaseModel, arbitrary_types_allowed=True):
     enable: bool
-    seasonality_list: List[Seasonality] = []
+    amplitude: float = 200.0
+    period: timedelta = timedelta(hours=6)
 
 
 class MissingDataConfig(BaseModel, arbitrary_types_allowed=True):
@@ -49,22 +50,106 @@ class MissingDataConfig(BaseModel, arbitrary_types_allowed=True):
     miss_probability: float  # Probability of a value being missing (0)
 
 
-default_noise = NoiseConfig(
-    enable=True, noise_list=[RedNoise(mean=0, std=2, correlation=0.5, random_seed=42)]
-)
+default_noise = NoiseConfig(enable=True, mean=0, std=2)
 default_seasonality = SeasonalityConfig(
-    enable=True,
-    seasonality_list=[SinusoidalSeasonality(amplitude=200, period=timedelta(hours=6))],
+    enable=True, amplitude=200, period=timedelta(hours=6)
 )
 
 
-def convert_to_dataframe(ts_values, time_points: List[datetime]) -> pd.DataFrame:
-    metrics = pd.DataFrame(columns=["ds", "y"])
-    for i, value in enumerate(time_points):
-        metrics.loc[i] = [value.timestamp(), ts_values[i]]
+_COMPONENT_NAME = "value"
 
-    metrics = metrics.dropna()
-    return metrics
+
+def _darts_ts_to_dataframe(darts_ts) -> pd.DataFrame:
+    """Convert a Darts TimeSeries to a pd.DataFrame with 'ds' (epoch) and 'y' columns."""
+    pdf = darts_ts.pd_dataframe()
+    timestamps = [t.timestamp() for t in pdf.index]
+    values = pdf.iloc[:, 0].values
+    return pd.DataFrame({"ds": timestamps, "y": values})
+
+
+def _build_piecewise_signal(
+    series_config: SeriesConfig,
+    transition_config: Optional[TransitionConfig],
+) -> Any:
+    """Build a piecewise signal: flat(start_value) → linear transition → flat(end_value).
+
+    Uses Darts linear_timeseries and constant_timeseries, then concatenates.
+    """
+    # Strip tz for darts (xarray doesn't support tz-aware timestamps)
+    start_time = pd.Timestamp(series_config.start_time).tz_localize(None)
+    end_time = start_time + series_config.duration
+    freq_str = f"{int(series_config.step.total_seconds())}s"
+    total_points = int(series_config.duration / series_config.step)
+
+    if transition_config is None:
+        # Instant switch at start_time
+        return constant_timeseries(
+            value=series_config.end_value,
+            start=start_time,
+            length=total_points,
+            freq=freq_str,
+            column_name=_COMPONENT_NAME,
+        )
+
+    transition_start = pd.Timestamp(transition_config.start_time).tz_localize(None)
+    transition_end = transition_start + transition_config.transition_window
+
+    # Calculate point counts for each segment
+    pre_points = max(0, int((transition_start - start_time) / series_config.step))
+    transition_points = max(
+        1, int(transition_config.transition_window / series_config.step)
+    )
+    post_points = max(0, total_points - pre_points - transition_points)
+
+    segments = []
+
+    # Pre-transition flat segment
+    if pre_points > 0:
+        segments.append(
+            constant_timeseries(
+                value=series_config.start_value,
+                start=start_time,
+                length=pre_points,
+                freq=freq_str,
+                column_name=_COMPONENT_NAME,
+            )
+        )
+
+    # Transition segment (linear ramp)
+    trans_start_ts = start_time + pre_points * series_config.step
+    if transition_points > 0:
+        segments.append(
+            linear_timeseries(
+                start_value=series_config.start_value,
+                end_value=series_config.end_value,
+                start=trans_start_ts,
+                length=transition_points,
+                freq=freq_str,
+                column_name=_COMPONENT_NAME,
+            )
+        )
+
+    # Post-transition flat segment
+    if post_points > 0:
+        post_start_ts = trans_start_ts + transition_points * series_config.step
+        segments.append(
+            constant_timeseries(
+                value=series_config.end_value,
+                start=post_start_ts,
+                length=post_points,
+                freq=freq_str,
+                column_name=_COMPONENT_NAME,
+            )
+        )
+
+    # Concatenate all segments
+    if len(segments) == 1:
+        return segments[0]
+
+    result = segments[0]
+    for seg in segments[1:]:
+        result = result.concatenate(seg, ignore_time_axis=True)
+    return result
 
 
 def generate_missing_data(config: MissingDataConfig, frequency: timedelta):
@@ -99,56 +184,70 @@ def generate_timeseries(
     seasonality_config: SeasonalityConfig = default_seasonality,
     missing_data_configs: List[MissingDataConfig] | None = None,
 ) -> pd.DataFrame:
-    switch = None
-    if time_config.transition_config is None:
-        switch = Switch(
-            start_time=time_config.series_config.start_time,
-            base_value=time_config.series_config.start_value,
-            switch_value=time_config.series_config.end_value,
-        )
-    else:
-        switch = Switch(
-            start_time=time_config.transition_config.start_time,
-            base_value=time_config.series_config.start_value,
-            switch_value=time_config.series_config.end_value,
-            transition=time_config.transition_config.transition,
-        )
-    time_series = switch
-
-    if seasonality_config.enable:
-        for seasonality in seasonality_config.seasonality_list:
-            time_series = time_series + seasonality
-
-    if noise_config.enable:
-        for noise in noise_config.noise_list:
-            time_series = time_series + noise
-
-    time_points = datetime_range(
-        granularity=time_config.series_config.step,
-        start_time=time_config.series_config.start_time,
-        end_time=time_config.series_config.start_time
-        + time_config.series_config.duration,
+    # Strip tz for darts; re-localize to UTC after extraction for correct epoch conversion
+    start_time = pd.Timestamp(time_config.series_config.start_time).tz_localize(None)
+    freq_str = f"{int(time_config.series_config.step.total_seconds())}s"
+    total_points = int(
+        time_config.series_config.duration / time_config.series_config.step
     )
 
-    ts_values = time_series.generate(time_points=time_points)
+    # Build the base piecewise signal
+    base_signal = _build_piecewise_signal(
+        time_config.series_config, time_config.transition_config
+    )
 
+    # Extract time index and values as numpy arrays to avoid xarray
+    # component-name alignment issues (FutureWarning + potential NaN)
+    # Re-localize to UTC so .timestamp() produces correct epoch seconds
+    time_index = base_signal.time_index.tz_localize("UTC")
+    values = base_signal.values().flatten()
+
+    # Add seasonality (numpy arithmetic)
+    if seasonality_config.enable:
+        period_in_steps = seasonality_config.period / time_config.series_config.step
+        # value_frequency = number of full periods per time unit (1 step)
+        value_frequency = 1.0 / period_in_steps
+        seasonality_ts = sine_timeseries(
+            value_frequency=value_frequency,
+            value_amplitude=seasonality_config.amplitude,
+            value_y_offset=0,
+            start=start_time,
+            length=total_points,
+            freq=freq_str,
+        )
+        values = values + seasonality_ts.values().flatten()
+
+    # Add noise (numpy arithmetic)
+    if noise_config.enable:
+        noise_ts = gaussian_timeseries(
+            mean=noise_config.mean,
+            std=noise_config.std,
+            start=start_time,
+            length=total_points,
+            freq=freq_str,
+        )
+        values = values + noise_ts.values().flatten()
+
+    # Build DataFrame directly from numpy arrays
+    timestamps = [t.timestamp() for t in time_index]
+    result_df = pd.DataFrame({"ds": timestamps, "y": values})
+
+    # Apply missing data
     if missing_data_configs is not None:
+        time_points = pd.to_datetime(result_df["ds"], unit="s")
         for missing_data_config in missing_data_configs:
             missing_data = generate_missing_data(
                 missing_data_config, time_config.series_config.step
             )
-
-            # Find the first index in timepoints corresponding to the start time of the missing data
             start_index = find_closest_index(
                 time_points, missing_data_config.start_time
             )
-
-            # Replace the values with missing data
             for i in range(len(missing_data)):
                 if missing_data[i] == 0:
-                    ts_values[start_index + i] = None
+                    result_df.loc[start_index + i, "y"] = None
+        result_df = result_df.dropna()
 
-    return convert_to_dataframe(ts_values, time_points)
+    return result_df
 
 
 def generate_spikes(spike_pattern, spike_multiplier, ts_values):

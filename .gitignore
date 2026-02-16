@@ -10,3 +10,4 @@ utils/promtool
 utils/prometheus
 analysis/data_proccesor/mock_data/
 *__pycache__*
+outputs/

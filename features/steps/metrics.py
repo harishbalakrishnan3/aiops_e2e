@@ -1,6 +1,8 @@
 import time
 import logging
 from datetime import timedelta
+
+import numpy as np
 from behave import *
 from opentelemetry import metrics
 from cdo_apis import remote_write
@@ -43,6 +45,15 @@ def batch_remote_write(synthesized_ts: GeneratedData, step: timedelta):
     values = synthesized_ts.values
     labels = synthesized_ts.labels
 
+    # Guard against NaN/Inf values that would cause a 400 from the ingest endpoint
+    bad_mask = np.isnan(values["y"]) | np.isinf(values["y"])
+    if bad_mask.any():
+        bad_count = bad_mask.sum()
+        logging.warning(
+            f"Dropping {bad_count} NaN/Inf value(s) from {synthesized_ts.metric_name} before remote write"
+        )
+        values = values[~bad_mask].reset_index(drop=True)
+
     data_points = []
     for i, value in values.iterrows():
         timestamp = int(value["ds"] * 1e9)
@@ -50,7 +61,7 @@ def batch_remote_write(synthesized_ts: GeneratedData, step: timedelta):
             NumberDataPoint(
                 time_unix_nano=timestamp,
                 start_time_unix_nano=timestamp,
-                value=value["y"],
+                value=float(value["y"]),
                 attributes=labels,
             )
         )
@@ -75,6 +86,19 @@ def batch_remote_write(synthesized_ts: GeneratedData, step: timedelta):
     )
 
     metrics_data_now = MetricsData(resource_metrics=[resource_metric])
+
+    # Log payload details for debugging remote write failures
+    ts_range = (
+        f"{data_points[0].time_unix_nano} -> {data_points[-1].time_unix_nano}"
+        if data_points
+        else "empty"
+    )
+    val_sample = [dp.value for dp in data_points[:3]]
+    logging.info(
+        f"batch_remote_write: metric={synthesized_ts.metric_name}, "
+        f"points={len(data_points)}, labels={list(labels.keys())}, "
+        f"ts_range_ns=[{ts_range}], sample_values={val_sample}"
+    )
 
     remote_write(metrics_data=metrics_data_now)
 
