@@ -11,29 +11,39 @@ class Path:
     )
     PROJECT_ROOT = os.path.dirname(BEHAVE_FEATURES_ROOT)
     PYTHON_UTILS_ROOT = os.path.join(PROJECT_ROOT, "utils")
+    OUTPUTS_DIR = os.path.join(PROJECT_ROOT, "outputs")
+    RESOURCES_DIR = os.path.join(BEHAVE_FEATURES_ROOT, "resources")
 
 
 HELIOS_ASSISTANT_ID = 343
+
+_PROD_ENV_URLS = {
+    "prod": "https://www.defenseorchestrator.com",
+    "prodapj": "https://www.apj.cdo.cisco.com",
+    "prodeu": "https://www.defenseorchestrator.eu",
+    "prodaus": "https://www.aus.cdo.cisco.com",
+    "produae": "https://www.uae.cdo.cisco.com",
+    "prodin": "https://www.in.cdo.cisco.com",
+}
+
+
+def get_base_url(env: str) -> str:
+    """Return the base URL for a given environment name.
+
+    Recognised values: prod, prodapj, prodeu, prodaus, produae, prodin,
+    staging, scale, ci, or any other non-prod env slug.
+    """
+    env_lower = env.lower()
+    if env_lower in _PROD_ENV_URLS:
+        return _PROD_ENV_URLS[env_lower]
+    return f"https://edge.{env_lower}.cdo.cisco.com"
 
 
 class Endpoints:
     def __init__(self):
         load_dotenv()
         env = os.getenv("ENV").lower()
-        if env == "prod":
-            self.BASE_URL = "https://www.defenseorchestrator.com"
-        elif env == "prodapj":
-            self.BASE_URL = "https://www.apj.cdo.cisco.com"
-        elif env == "prodeu":
-            self.BASE_URL = "https://www.defenseorchestrator.eu"
-        elif env == "prodaus":
-            self.BASE_URL = "https://www.aus.cdo.cisco.com"
-        elif env == "produae":
-            self.BASE_URL = "https://www.uae.cdo.cisco.com"
-        elif env == "prodin":
-            self.BASE_URL = "https://www.in.cdo.cisco.com"
-        else:
-            self.BASE_URL = "https://edge.{}.cdo.cisco.com".format(env)
+        self.BASE_URL = get_base_url(env)
 
         self.INSIGHTS_URL = self.BASE_URL + "/api/platform/ai-ops-insights/v1/insights"
         self.TENANT_ONBOARD_V2_URL = (

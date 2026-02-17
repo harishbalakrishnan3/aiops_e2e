@@ -2,6 +2,8 @@ import json
 import os
 import logging
 from datetime import datetime
+from typing import Dict
+
 import requests
 from opentelemetry.exporter.prometheus_remote_write import (
     PrometheusRemoteWriteMetricsExporter,
@@ -12,6 +14,25 @@ from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
 endpoints = get_endpoints()
+
+
+def _create_session():
+    """Create a requests session with retry logic and auth headers."""
+    retry = Retry(
+        total=3,
+        backoff_factor=2,
+        status_forcelist=[429] + list(range(500, 600)),
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session = requests.Session()
+    session.mount("https://", adapter)
+    session.headers.update(
+        {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {os.getenv('CDO_TOKEN')}",
+        }
+    )
+    return session
 
 
 def get_insights(query_params=None, fields=None):
@@ -73,8 +94,31 @@ def delete_all_insights():
     logging.info(f"Successfully deleted all {total_count} insights.")
 
 
+class _DebugRemoteWriteExporter(PrometheusRemoteWriteMetricsExporter):
+    """Subclass that logs the response body on failure for debugging."""
+
+    def _send_message(self, message: bytes, headers: Dict) -> MetricExportResult:
+        try:
+            response = requests.post(
+                self.endpoint,
+                data=message,
+                headers=headers,
+                timeout=self.timeout,
+            )
+            if not response.ok:
+                logging.error(
+                    f"Remote write failed: status={response.status_code}, "
+                    f"body={response.text[:1000]}"
+                )
+                response.raise_for_status()
+        except requests.exceptions.RequestException as err:
+            logging.error(f"Export POST request failed: {err}")
+            return MetricExportResult.FAILURE
+        return MetricExportResult.SUCCESS
+
+
 def remote_write(metrics_data: MetricsData):
-    exporter = PrometheusRemoteWriteMetricsExporter(
+    exporter = _DebugRemoteWriteExporter(
         endpoint=get_endpoints().DATA_INGEST_URL,
         headers={"Authorization": "Bearer " + os.getenv("CDO_TOKEN")},
     )
@@ -163,22 +207,8 @@ def update_device_data(device_uid):
 def get(endpoint, print_body=True):
     try:
         logging.debug(f"Sending GET request to {endpoint}")
-        retry = Retry(
-            total=3,
-            backoff_factor=2,
-            status_forcelist=[i for i in range(400, 600)],
-        )
-        adapter = HTTPAdapter(max_retries=retry)
-        session = requests.Session()
-        session.mount("https://", adapter)
-        response = session.get(
-            endpoint,
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + os.getenv("CDO_TOKEN"),
-            },
-            timeout=180,
-        )
+        session = _create_session()
+        response = session.get(endpoint, timeout=180)
         response_payload = response.json()
         if print_body:
             logging.info(
@@ -196,23 +226,8 @@ def get(endpoint, print_body=True):
 def post(endpoint, payload=None, expected_return_code=200):
     try:
         logging.info(f"Sending POST request to {endpoint} with payload {payload}")
-        retry = Retry(
-            total=3,
-            backoff_factor=2,
-            status_forcelist=[i for i in range(400, 600)],
-        )
-        adapter = HTTPAdapter(max_retries=retry)
-        session = requests.Session()
-        session.mount("https://", adapter)
-        response = session.post(
-            endpoint,
-            data=payload,
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + os.getenv("CDO_TOKEN"),
-            },
-            timeout=180,
-        )
+        session = _create_session()
+        response = session.post(endpoint, data=payload, timeout=180)
         logging.info(
             f"Response status: {response.status_code}, Response: {response.text}"
         )
@@ -230,19 +245,8 @@ def post(endpoint, payload=None, expected_return_code=200):
 def delete(endpoint, expected_return_code=200):
     try:
         logging.info(f"Sending DELETE request to {endpoint}")
-        retry = Retry(
-            total=3,
-            backoff_factor=2,
-            status_forcelist=[i for i in range(400, 600)],
-        )
-        adapter = HTTPAdapter(max_retries=retry)
-        session = requests.Session()
-        session.mount("https://", adapter)
-        response = session.delete(
-            endpoint,
-            headers={"Authorization": "Bearer " + os.getenv("CDO_TOKEN")},
-            timeout=180,
-        )
+        session = _create_session()
+        response = session.delete(endpoint, timeout=180)
         logging.info(
             f"Response status: {response.status_code}, Response: {response.text}"
         )

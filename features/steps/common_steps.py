@@ -23,23 +23,23 @@ from features.steps.cdo_apis import (
     verify_insight_type_and_state,
     get_insights,
 )
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone
 from features.steps.metrics import instant_remote_write
 from features.steps.utils import (
     generate_synthesized_ts_obj,
     split_data_for_batch_and_live_ingestion,
     GeneratedData,
     get_label_map,
+    write_timeseries_yaml,
 )
 from time_series_generator import (
     generate_timeseries,
+    NoiseConfig,
     TimeConfig,
     SeasonalityConfig,
     SeriesConfig,
     TransitionConfig,
 )
-from mockseries.transition import LinearTransition
-from mockseries.seasonality.sinusoidal_seasonality import SinusoidalSeasonality
 
 
 @step("the insights are cleared")
@@ -356,7 +356,7 @@ def generate_data_for_input(context, duration_delta: timedelta) -> List[Generate
             int(row["amplitude"]) if "amplitude" in context.table.headings else 20
         )
 
-        start_time = datetime.now() - duration_delta
+        start_time = datetime.now(timezone.utc) - duration_delta
         generated_data = generate_timeseries(
             time_config=TimeConfig(
                 series_config=SeriesConfig(
@@ -367,30 +367,43 @@ def generate_data_for_input(context, duration_delta: timedelta) -> List[Generate
                 ),
                 transition_config=TransitionConfig(
                     start_time=start_time + timedelta(minutes=start_spike_minute),
-                    transition=LinearTransition(
-                        transition_window=timedelta(minutes=spike_duration_minutes)
-                    ),
+                    transition_window=timedelta(minutes=spike_duration_minutes),
                 ),
             ),
             seasonality_config=SeasonalityConfig(
                 enable=True,
-                seasonality_list=[
-                    SinusoidalSeasonality(
-                        amplitude=amplitude,
-                        period=timedelta(hours=seasonality_period_hours),
-                    )
-                ],
+                amplitude=amplitude,
+                period=timedelta(hours=seasonality_period_hours),
             ),
+            noise_config=NoiseConfig(enable=False),
         )
 
         if metric_type == "counter":
             generated_data["y"] = generated_data["y"].cumsum()
 
+        label_map = get_label_map(context, label_string, duration_delta)
+
+        write_timeseries_yaml(
+            context=context,
+            metric_name=metric_name,
+            labels=label_map,
+            generated_data=generated_data,
+            ts_features={
+                "seasonality": {
+                    "enabled": True,
+                    "amplitude": amplitude,
+                    "period_hours": seasonality_period_hours,
+                },
+                "trend": f"{start_value} -> {end_value} over {spike_duration_minutes}m (start at {start_spike_minute}m)",
+                "noise": False,
+            },
+        )
+
         generated_data_list.append(
             GeneratedData(
                 metric_name=metric_name,
                 values=generated_data,
-                labels=get_label_map(context, label_string, duration_delta),
+                labels=label_map,
             )
         )
     return generated_data_list

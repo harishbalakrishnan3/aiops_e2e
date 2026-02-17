@@ -1,10 +1,9 @@
 import time
 from behave import *
 from hamcrest import assert_that
-from mockseries.transition import LinearTransition
 
 from features.model import Device
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone
 
 from features.steps.metrics import instant_remote_write
 from features.steps.time_series_generator import (
@@ -46,7 +45,7 @@ def step_impl(context, duration):
     labels = {"conn_stats": "connection", "description": "in_use"} | get_common_labels(
         context, timedelta(days=14)
     )
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     live_data = generate_timeseries(
         time_config=TimeConfig(
             series_config=SeriesConfig(
@@ -57,9 +56,7 @@ def step_impl(context, duration):
             ),
             transition_config=TransitionConfig(
                 start_time=now,
-                transition=LinearTransition(
-                    transition_window=timedelta(minutes=int(duration)),
-                ),
+                transition_window=timedelta(minutes=int(duration)),
             ),
         ),
     )

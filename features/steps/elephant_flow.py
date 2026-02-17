@@ -3,10 +3,9 @@ import logging
 import os
 import time as time_module
 from datetime import datetime
-from pathlib import Path
-
 from behave import *
 from features.steps.cdo_apis import get_insights
+from features.steps.env import Path
 
 
 @step("check elephant flow insight data from {filename}")
@@ -21,10 +20,9 @@ def step_impl(context, filename):
     insight = context.matched_insight
 
     # Load expected flow data from external JSON file
-    resources_dir = Path(__file__).parent / "resources/elephant_flow"
-    flow_data_file = resources_dir / filename
+    flow_data_file = os.path.join(Path.RESOURCES_DIR, "elephant_flow", filename)
 
-    if not flow_data_file.exists():
+    if not os.path.exists(flow_data_file):
         logging.error(f"Flow data file not found: {flow_data_file}")
         assert False, f"Resource file {filename} not found"
 

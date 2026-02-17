@@ -1,19 +1,25 @@
 import copy
+import json
 import logging
-import time
-from datetime import datetime, timedelta
+import os
 import re
+import time
+import uuid
+from datetime import datetime, timedelta, timezone
 from typing import List
+
+import yaml
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from mockseries.transition import LinearTransition
 from pydantic import BaseModel
 
 from features.model import Device, ScenarioEnum
 from features.steps.cdo_apis import get, update_device_data
-from features.steps.env import get_endpoints
+from features.steps.env import Path, get_endpoints
+from shared.label_utils import format_labels
+from shared.step_utils import parse_step_to_seconds
 from features.steps.time_series_generator import (
     NoiseConfig,
     SeasonalityConfig,
@@ -23,6 +29,50 @@ from features.steps.time_series_generator import (
     default_noise,
     generate_timeseries,
 )
+
+# Load scenario prerequisites from JSON config
+_SCENARIO_PREREQUISITES = None
+
+
+def _load_scenario_prerequisites() -> dict:
+    global _SCENARIO_PREREQUISITES
+    if _SCENARIO_PREREQUISITES is None:
+        config_path = os.path.join(Path.RESOURCES_DIR, "scenario_prerequisites.json")
+        with open(config_path, "r") as f:
+            _SCENARIO_PREREQUISITES = json.load(f)
+    return _SCENARIO_PREREQUISITES
+
+
+def _filter_devices_by_type(devices: list, device_filter: str) -> list:
+    """Filter devices based on the device_filter from prerequisites config.
+
+    For non-ravpn filters, devices with RAVPN enabled are deprioritised so they
+    remain available for the RAVPN scenario (which needs a fresh device every
+    daily Jenkins run over a 21-day backfill window).
+    """
+    if device_filter == "ravpn":
+        return [d for d in devices if d.ra_vpn_enabled]
+
+    if device_filter == "standalone":
+        candidates = [d for d in devices if d.container_type is None]
+    elif device_filter == "HA_PAIR":
+        candidates = [d for d in devices if d.container_type == "HA_PAIR"]
+    elif device_filter == "CLUSTER":
+        candidates = [d for d in devices if d.container_type == "CLUSTER"]
+    else:
+        logging.warning(
+            f"Unknown device_filter '{device_filter}', returning all devices"
+        )
+        candidates = devices
+
+    # Prefer non-RAVPN devices to reserve RAVPN-capable ones for RAVPN scenarios
+    non_ravpn = [d for d in candidates if not d.ra_vpn_enabled]
+    if non_ravpn:
+        return non_ravpn
+    logging.warning(
+        "No non-RAVPN devices available, falling back to RAVPN-capable devices"
+    )
+    return candidates
 
 
 class GeneratedData(BaseModel, arbitrary_types_allowed=True):
@@ -41,10 +91,6 @@ class BackfillData(BaseModel, arbitrary_types_allowed=True):
     metric_name: str
     series: List[Series]
     description: str = "Test Backfill Data"
-
-
-# TODO : make this dynamic
-HISTORICAL_DATA_FILE = "anomaly_historical_data.txt"
 
 
 def store_ts_in_context(context, labels, key, metric_name):
@@ -81,6 +127,9 @@ def get_common_labels(context, duration: timedelta):
         if context.scenario == ScenarioEnum.RAVPN_FORECAST:
             update_device_data(device.aegis_device_uid)
         context.scenario_to_device_map[context.scenario] = device
+        # Track device as used globally to minimize overlap across scenarios
+        if hasattr(context, "used_devices"):
+            context.used_devices.add(device.device_record_uid)
 
     return {"tenant_uuid": context.tenant_id, "uuid": device.device_record_uid}
 
@@ -97,133 +146,45 @@ def get_appropriate_device(context, duration) -> Device:
     """
     Pickup a device for by scenario . Find a device where the to be ingested data is not present in the duration specified . This will avoid data ingestion failures due to existing data in the prometheus
 
+    Devices already used within the same feature file are excluded to ensure
+    each scenario in a feature gets a distinct device.
+
     :param context: behave context
     :param duration: duration for which data will be ingested
     """
+    prerequisites = _load_scenario_prerequisites()
+    scenario_key = context.scenario.name
 
-    query = ""
-    # Only pickup standalone devices
-    available_devices = [
-        device for device in context.devices if device.container_type == None
-    ]
+    if scenario_key not in prerequisites:
+        logging.warning(
+            f"No prerequisites found for scenario '{scenario_key}', picking up the last available device"
+        )
+        return context.devices[-1]
 
-    scenario = context.scenario
-    match scenario:
-        case ScenarioEnum.ELEPHANTFLOW_LEGACY | ScenarioEnum.ELEPHANTFLOW_ENHANCED:
-            query = 'query=efd_cpu_usage{{uuid="{uuid}"}}'
-        case ScenarioEnum.ELEPHANTFLOW_ENHANCED_HA:
-            available_devices = [
-                device
-                for device in context.devices
-                if device.container_type == "HA_PAIR"
-            ]
-            query = 'query=efd_cpu_usage{{uuid="{uuid}"}}'
-        case ScenarioEnum.ELEPHANTFLOW_ENHANCED_CLUSTER:
-            available_devices = [
-                device
-                for device in context.devices
-                if device.container_type == "CLUSTER"
-            ]
-            query = 'query=efd_cpu_usage{{uuid="{uuid}"}}'
-        case ScenarioEnum.CORRELATION_CPU_LINA:
-            query = (
-                'query=cpu{{cpu=~"lina_cp_avg|lina_dp_avg", uuid="{uuid}"}} '
-                'or rate(interface{{description=~"input_bytes|input_packets", interface="all", uuid="{uuid}"}}[4m]) '
-                'or conn_stats{{conn_stats="connection", description="in_use", uuid="{uuid}"}} '
-                'or deployed_configuration{{deployed_configuration="number_of_ACEs", uuid="{uuid}"}} '
-                'or sum(rate(interface{{description="drop_packets", uuid="{uuid}"}}[4m])) by (uuid, description)'
-            )
-        case ScenarioEnum.CORRELATION_CPU_SNORT:
-            query = (
-                'query=cpu{{cpu=~"snort_avg|lina_cp_avg", uuid="{uuid}"}} '
-                'or rate(interface{{description=~"input_bytes|input_packets|input_avg_packet_size", interface="all", uuid="{uuid}"}}[4m]) '
-                'or conn_stats{{conn_stats="connection", description="in_use", uuid="{uuid}"}} '
-                'or snort{{description="denied_flow_events", snort="stats", uuid="{uuid}"}} '
-                'or snort3_perfstats{{snort3_perfstats="concurrent_elephant_flows", uuid="{uuid}"}} '
-                'or rate(asp_drops{{asp_drops="snort-busy-not-fp", uuid="{uuid}"}}[4m])'
-            )
-        case ScenarioEnum.CORRELATION_MEM_LINA:
-            query = (
-                'query=mem{{mem="used_percentage_lina", uuid="{uuid}"}} '
-                'or rate(interface{{description=~"input_bytes|input_packets", interface="all", uuid="{uuid}"}}[4m]) '
-                'or conn_stats{{conn_stats="connection", description="in_use", uuid="{uuid}"}} '
-                'or deployed_configuration{{deployed_configuration="number_of_ACEs", uuid="{uuid}"}}'
-            )
-        case ScenarioEnum.CORRELATION_MEM_SNORT:
-            query = (
-                'query=mem{{mem="used_percentage_snort", uuid="{uuid}"}} '
-                'or rate(interface{{description=~"input_bytes|input_packets", interface="all", uuid="{uuid}"}}[4m]) '
-                'or conn_stats{{conn_stats="connection", description="in_use", uuid="{uuid}"}}'
-            )
-        case ScenarioEnum.CORRELATION_MEM_SNORT:
-            query = (
-                'query=mem{{mem="used_percentage_snort", uuid="{uuid}"}} '
-                'or rate(interface{{description=~"input_bytes|input_packets", interface="all", uuid="{uuid}"}}[4m]) '
-                'or conn_stats{{conn_stats="connection", description="in_use", uuid="{uuid}"}}'
-            )
-        case ScenarioEnum.CORRELATION_HA_ACTIVE:
-            available_devices = [
-                device
-                for device in context.devices
-                if device.container_type == "HA_PAIR"
-            ]
+    config = prerequisites[scenario_key]
+    available_devices = _filter_devices_by_type(
+        context.devices, config["device_filter"]
+    )
+    query = config["query"]
 
-            query = (
-                'query=cpu{{cpu=~"lina_cp_avg|snort_avg|lina_dp_avg", uuid="{uuid}"}} '
-                'or rate(interface{{description=~"input_bytes|input_packets", interface="all", uuid="{uuid}"}}[4m]) '
-                'or conn_stats{{conn_stats="connection", description="in_use", uuid="{uuid}"}} '
-                'or deployed_configuration{{deployed_configuration="number_of_ACEs", uuid="{uuid}"}} '
-                'or sum(rate(interface{{description="drop_packets", uuid="{uuid}"}}[4m])) by (uuid, description) '
-                'or snort{{description="denied_flow_events", snort="stats", uuid="{uuid}"}} '
-                'or snort3_perfstats{{snort3_perfstats="concurrent_elephant_flows", uuid="{uuid}"}} '
-                'or rate(asp_drops{{asp_drops="snort-busy-not-fp", uuid="{uuid}"}}[4m])'
-                'or mem{{mem="used_percentage_lina", uuid="{uuid}"}} '
-                'or mem{{mem="used_percentage_snort", uuid="{uuid}"}}'
+    # Prefer devices not yet used by any scenario to maximize diversity
+    used = getattr(context, "used_devices", set())
+    if used:
+        unused_devices = [
+            d for d in available_devices if d.device_record_uid not in used
+        ]
+        if unused_devices:
+            logging.info(
+                f"{len(unused_devices)} unused device(s) available out of "
+                f"{len(available_devices)} candidate(s), preferring unused"
             )
-        case ScenarioEnum.CORRELATION_CLUSTER_CONTROL:
-            available_devices = [
-                device
-                for device in context.devices
-                if device.container_type == "CLUSTER"
-            ]
-            query = (
-                'query=cpu{{cpu=~"lina_cp_avg|snort_avg|lina_dp_avg", uuid="{uuid}"}} '
-                'or rate(interface{{description=~"input_bytes|input_packets", interface="all", uuid="{uuid}"}}[4m]) '
-                'or conn_stats{{conn_stats="connection", description="in_use", uuid="{uuid}"}} '
-                'or deployed_configuration{{deployed_configuration="number_of_ACEs", uuid="{uuid}"}} '
-                'or sum(rate(interface{{description="drop_packets", uuid="{uuid}"}}[4m])) by (uuid, description) '
-                'or snort{{description="denied_flow_events", snort="stats", uuid="{uuid}"}} '
-                'or snort3_perfstats{{snort3_perfstats="concurrent_elephant_flows", uuid="{uuid}"}} '
-                'or rate(asp_drops{{asp_drops="snort-busy-not-fp", uuid="{uuid}"}}[4m])'
-                'or mem{{mem="used_percentage_lina", uuid="{uuid}"}} '
-                'or mem{{mem="used_percentage_snort", uuid="{uuid}"}}'
-            )
-        case ScenarioEnum.RAVPN_FORECAST:
-            available_devices = [
-                device for device in context.devices if device.ra_vpn_enabled == True
-            ]
-            query = 'query=vpn{{uuid="{uuid}"}}'
-        case (
-            ScenarioEnum.ANOMALY_CONNECTION
-            | ScenarioEnum.ANOMALY_CONNECTION_INTERMITTENT_SPIKES
-        ):
-            query = 'query=conn_stats{{uuid="{uuid}"}}'
-        case ScenarioEnum.ANOMALY_THROUGHPUT:
-            query = 'query=interface{{interface="all", description="input_bytes", uuid="{uuid}"}} or interface{{interface="all", description="output_bytes", uuid="{uuid}"}}'
-        case ScenarioEnum.CONNECTIONS_ANOMALY_STANDALONE:
-            query = 'query=conn_stats{{uuid="{uuid}"}}'
-        case ScenarioEnum.CONNECTIONS_ANOMALY_HA:
-            available_devices = [
-                device
-                for device in context.devices
-                if device.container_type == "HA_PAIR"
-            ]
-            query = 'query=conn_stats{{uuid="{uuid}"}}'
-        case _:
+            available_devices = unused_devices
+        else:
             logging.warning(
-                "No matching scenarios found , picking up the last available device"
+                f"All {len(available_devices)} candidate device(s) already used "
+                f"by other scenarios, allowing overlap"
             )
-            return context.devices[-1]
+
     return find_device_available_for_data_ingestion(available_devices, query, duration)
 
 
@@ -237,21 +198,11 @@ def find_device_available_for_data_ingestion(
     raise Exception("No device available for ingestion")
 
 
-def parse_step_to_seconds(step_str: str) -> int:
-    """Convert Prometheus step string (e.g., '5m', '1h', '30s') to seconds."""
-    match = re.match(r"(\d+)([smhd])", step_str)
-    if not match:
-        raise ValueError(f"Invalid step format: {step_str}")
-    value, unit = int(match.group(1)), match.group(2)
-    multipliers = {"s": 1, "m": 60, "h": 3600, "d": 86400}
-    return value * multipliers[unit]
-
-
 def is_data_present(query: str, duration: timedelta, step="5m"):
     MAX_PROMETHEUS_DATAPOINTS = 11000
 
-    start_time = datetime.now() - duration
-    end_time = datetime.now()
+    start_time = datetime.now(timezone.utc) - duration
+    end_time = datetime.now(timezone.utc)
 
     total_duration_seconds = int(duration.total_seconds())
     step_seconds = parse_step_to_seconds(step)
@@ -315,7 +266,7 @@ def generate_synthesized_ts_obj(
     metric_type: str = "gauge",
     noise: bool = None,
 ) -> GeneratedData:
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     offsetted_start_time = now - timedelta(minutes=duration) + time_offset
 
     # Configure noise based on the noise parameter
@@ -334,9 +285,7 @@ def generate_synthesized_ts_obj(
                 step=timedelta(minutes=1),
             ),
             transition_config=TransitionConfig(
-                transition=LinearTransition(
-                    transition_window=timedelta(minutes=spike_duration_minutes)
-                ),
+                transition_window=timedelta(minutes=spike_duration_minutes),
                 start_time=offsetted_start_time + timedelta(minutes=start_spike_minute),
             ),
         ),
@@ -367,9 +316,19 @@ def generate_synthesized_ts_obj(
         # Update the dataframe
         generated_data["y"] = y_values
 
-    # Uncomment to debug graphs of generated timeseries
-    # save_timeseries_graph(generated_data, metric_name, label_map)
     label_map = get_label_map(context, label_string, timedelta(minutes=duration))
+
+    write_timeseries_yaml(
+        context=context,
+        metric_name=metric_name,
+        labels=label_map,
+        generated_data=generated_data,
+        ts_features={
+            "seasonality": False,
+            "trend": f"{start_value} -> {end_value} over {spike_duration_minutes}m (start at {start_spike_minute}m)",
+            "noise": noise_config.enable,
+        },
+    )
 
     return GeneratedData(
         metric_name=metric_name,
@@ -407,8 +366,8 @@ def split_data_for_batch_and_live_ingestion(
 def check_if_data_present(
     metric_name: str, duration_delta: timedelta, labels: dict = {}
 ) -> bool:
-    start_time = datetime.now() - duration_delta
-    end_time = datetime.now()
+    start_time = datetime.now(timezone.utc) - duration_delta
+    end_time = datetime.now(timezone.utc)
 
     # Convert to epoch seconds
     start_time_epoch = int(start_time.timestamp())
@@ -431,6 +390,7 @@ def start_polling(query: str, retry_count: int, retry_frequency_seconds: int) ->
             break
 
         count += 1
+        logging.info(f"Attempt {count}/{retry_count}: Checking for data in Prometheus")
 
         # Check for data in Prometheus
         response = get(endpoint, print_body=False)
@@ -459,8 +419,56 @@ def get_index_of_metric_object(
     return -1
 
 
-def format_device_labels(labels: dict):
-    return ",".join([f'{k}="{v}"' for k, v in labels.items()])
+# Re-export for backward compatibility
+format_device_labels = format_labels
+
+
+def _sanitize_dirname(name: str) -> str:
+    """Convert a display name to a safe directory name."""
+    return re.sub(r"[^a-zA-Z0-9_-]", "_", name).strip("_")
+
+
+def write_timeseries_yaml(
+    context,
+    metric_name: str,
+    labels: dict,
+    generated_data,
+    ts_features: dict,
+):
+    """Write generated timeseries to a YAML file under outputs/<feature>/<scenario>/."""
+    feature_name = getattr(context, "feature_name", "unknown_feature")
+    scenario_enum = getattr(context, "scenario", ScenarioEnum.UNKNOWN_SCENARIO)
+
+    feature_dir = _sanitize_dirname(feature_name)
+    scenario_dir = _sanitize_dirname(scenario_enum.name)
+
+    output_dir = os.path.join(Path.OUTPUTS_DIR, feature_dir, scenario_dir)
+    os.makedirs(output_dir, exist_ok=True)
+
+    short_hash = uuid.uuid4().hex[:8]
+    filename = f"{scenario_enum.name}_{metric_name}_{short_hash}.yaml"
+    filepath = os.path.join(output_dir, filename)
+
+    timestamps = generated_data["ds"].tolist()
+    values = generated_data["y"].tolist()
+
+    doc = {
+        "metric": metric_name,
+        "labels": [{k: str(v)} for k, v in labels.items()],
+        "start_time": datetime.fromtimestamp(timestamps[0]).isoformat()
+        if timestamps
+        else "",
+        "end_time": datetime.fromtimestamp(timestamps[-1]).isoformat()
+        if timestamps
+        else "",
+        "ts_features": ts_features,
+        "timeseries": [{int(ts): round(val, 4)} for ts, val in zip(timestamps, values)],
+    }
+
+    with open(filepath, "w") as f:
+        yaml.dump(doc, f, default_flow_style=False, sort_keys=False)
+
+    logging.info(f"Wrote timeseries YAML to {filepath}")
 
 
 def convert_to_backfill_data(

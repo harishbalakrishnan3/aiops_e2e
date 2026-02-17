@@ -1,16 +1,16 @@
 import json
-import os
 import logging
+import os
+import re
+import shutil
 import sys
 from datetime import datetime, timezone
 
 import jwt
-from behave.model_core import Status
-
 from dotenv import load_dotenv
 
 from features.steps.cdo_apis import get, post
-from features.steps.env import get_endpoints
+from features.steps.env import Path, get_endpoints
 from features.model import Device, ScenarioEnum
 
 timeseries = {}
@@ -72,23 +72,59 @@ def before_all(context):
         decoded = jwt.decode(cdo_token, options={"verify_signature": False})
         context.tenant_id = decoded["parentId"]
 
-    # Update the device details such as its name, id and aegis record id in context
-    update_device_details(context)
-
-    # Initialize a flag to track failures
-    context.stop_execution = False
+    # Discover all FTD devices (does NOT require RAVPN)
+    discover_devices(context)
 
     # Initialize map between a scenario and a device (each scenario can have an associated device)
     context.scenario_to_device_map = {}
 
+    # Track devices used across all scenarios to maximize device diversity
+    context.used_devices = set()
+
     # Initialize list of generated data for each scenario for bulk backfill in scenario
     context.generated_data_list = []
+
+    # Track whether RAVPN discovery has been done (lazy initialization)
+    context.ravpn_discovered = False
 
     # Get the remote write config for GCM
     context.remote_write_config = get_gcm_remote_write_config()
 
 
-def update_device_details(context):
+def discover_devices(context):
+    """Discover all FTD devices. Does NOT check RAVPN status."""
+    device_details = get(
+        get_endpoints().DEVICES_DETAILS_URL + "&limit=200", print_body=False
+    )
+    available_devices = []
+    for device in device_details:
+        # Skip devices without metadata or missing required metadata fields
+        if (
+            "metadata" not in device
+            or device["metadata"] is None
+            or "deviceRecordUuid" not in device["metadata"]
+            or "containerType" not in device["metadata"]
+        ):
+            logging.info(
+                f"Skipping device {device.get('name', 'unknown')} - missing metadata or required fields"
+            )
+            continue
+        device_obj = Device(
+            device_name=device["name"],
+            aegis_device_uid=device["uid"],
+            device_record_uid=device["metadata"]["deviceRecordUuid"],
+            container_type=device["metadata"]["containerType"],
+        )
+        available_devices.append(device_obj)
+    context.devices = available_devices
+    logging.info(f"Discovered {len(available_devices)} FTD devices")
+
+
+def discover_ravpn_devices(context):
+    """Discover RAVPN-enabled devices. Only called when RAVPN feature runs."""
+    if context.ravpn_discovered:
+        return
+
     # Get cdFMC UID
     resp = get(get_endpoints().FMC_DETAILS_URL, print_body=False)
     uid = ""
@@ -115,48 +151,23 @@ def update_device_details(context):
     logging.info(resp.json())
     ra_vpn_enabled_devices = json.loads(resp.json()["data"]["responseBody"])
 
-    available_devices = []  # List of all the available devices
-    ra_vpn_devices = []  # List of only the devices with RA-VPN enabled
-    device_details = get(
-        get_endpoints().DEVICES_DETAILS_URL + "&limit=200", print_body=False
-    )
-    for device in device_details:
-        # Skip devices without metadata or missing required metadata fields
-        if (
-            "metadata" not in device
-            or device["metadata"] is None
-            or "deviceRecordUuid" not in device["metadata"]
-            or "containerType" not in device["metadata"]
-        ):
-            logging.info(
-                f"Skipping device {device.get('name', 'unknown')} - missing metadata or required fields"
-            )
-            continue
-        device_obj = Device(
-            device_name=device["name"],
-            aegis_device_uid=device["uid"],
-            device_record_uid=device["metadata"]["deviceRecordUuid"],
-            container_type=device["metadata"]["containerType"],
-        )
-        ra_vpn_enabled = False
-        if is_ra_vpn_enabled(
-            ra_vpn_enabled_devices, device["metadata"]["deviceRecordUuid"]
-        ):
-            ra_vpn_enabled = True
-            ra_vpn_devices.append(device_obj)
-        device_obj.ra_vpn_enabled = ra_vpn_enabled
-        available_devices.append(device_obj)
-    context.devices = available_devices
+    ra_vpn_devices = []
+    for device in context.devices:
+        if is_ra_vpn_enabled(ra_vpn_enabled_devices, device.device_record_uid):
+            device.ra_vpn_enabled = True
+            ra_vpn_devices.append(device)
 
     logging.info(
-        f"There are {len(available_devices)} devices available with {len(ra_vpn_devices)} devices having RA-VPN enabled"
+        f"{len(ra_vpn_devices)} of {len(context.devices)} devices have RA-VPN enabled"
     )
     logging.info(
         f"Devices with RA-VPN enabled: {[device.device_name for device in ra_vpn_devices]}"
     )
 
-    if not any(device.ra_vpn_enabled for device in available_devices):
+    if not ra_vpn_devices:
         raise Exception("RA-VPN gateway not found")
+
+    context.ravpn_discovered = True
 
 
 def is_ra_vpn_enabled(ra_vpn_enabled_devices, device_record_uid):
@@ -171,7 +182,19 @@ def is_ra_vpn_enabled(ra_vpn_enabled_devices, device_record_uid):
 
 
 def before_feature(context, feature):
+    context.feature_name = feature.name
+
+    # Clean the feature's output directory so each run starts fresh
+    feature_dir = os.path.join(
+        Path.OUTPUTS_DIR, re.sub(r"[^a-zA-Z0-9_-]", "_", feature.name).strip("_")
+    )
+    if os.path.exists(feature_dir):
+        shutil.rmtree(feature_dir)
+        logging.info(f"Cleaned output directory: {feature_dir}")
+
     if feature.name == "Testing RA-VPN forecasting":
+        # Lazily discover RAVPN devices only when this feature runs
+        discover_ravpn_devices(context)
         logging.info("Updating RA-VPN forecasting module settings")
         module_settings = {
             "moduleName": "RAVPN_MAX_SESSIONS_BREACH_FORECAST",
@@ -201,9 +224,6 @@ def before_feature(context, feature):
 
 
 def before_scenario(context, scenario):
-    if context.stop_execution:
-        scenario.skip("Skipping scenario due to a previous failure.")
-
     try:
         context.scenario = ScenarioEnum(scenario.name)
     except:
@@ -211,11 +231,6 @@ def before_scenario(context, scenario):
 
     # Initialize a list to track insights created during this scenario
     context.scenario_insights = []
-
-
-def after_scenario(context, scenario):
-    if scenario.status == Status.failed:
-        context.stop_execution = True
 
 
 def after_all(context):

@@ -5,20 +5,27 @@ import logging
 import os
 import subprocess
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
 import requests
+from darts.utils.timeseries_generation import (
+    linear_timeseries,
+    sine_timeseries,
+)
 from dotenv import load_dotenv
 from jinja2 import Template
-from mockseries.seasonality import DailySeasonality
-from mockseries.trend import LinearTrend
-from mockseries.utils import datetime_range
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
+
+from features.steps.env import get_base_url
+from shared.label_utils import format_labels, parse_labels
+from shared.step_utils import parse_step_to_minutes
 
 logging.basicConfig(
     level=logging.INFO,
@@ -35,149 +42,43 @@ TEMPLATE = Template(
 )
 
 
-def sanitize_label_name(label_name):
-    """
-    Sanitize label name to conform to Prometheus naming rules.
-    Label names must match [a-zA-Z_][a-zA-Z0-9_]* - only letters, numbers, underscores.
-    Cannot start with a number.
-    """
-    import re
-
-    sanitized = label_name.strip()
-    sanitized = re.sub(r"[^a-zA-Z0-9_]", "_", sanitized)
-
-    if sanitized and sanitized[0].isdigit():
-        sanitized = "_" + sanitized
-
-    if sanitized != label_name.strip():
-        logging.warning(f"Label name '{label_name}' sanitized to '{sanitized}'")
-
-    return sanitized
-
-
-def parse_labels(label_string):
-    """Parse label string in format 'key1=value1,key2=value2' into dict."""
-    if not label_string:
-        return {}
-    labels = {}
-    for pair in label_string.split(","):
-        if "=" in pair:
-            key, value = pair.split("=", 1)
-            sanitized_key = sanitize_label_name(key)
-            labels[sanitized_key] = value.strip()
-    return labels
-
-
-def format_labels(labels_dict):
-    """Format labels dict into Prometheus label string."""
-    return ",".join([f'{k}="{v}"' for k, v in labels_dict.items()])
-
-
-def parse_step_size(step_size_str):
-    """
-    Parse step size string (e.g., '5m', '15m', '1h') to minutes.
-    If input is already an integer, return it as-is.
-
-    Args:
-        step_size_str: Step size string like '5m', '15m', '1h', '30s' or integer
-
-    Returns:
-        int: Step size in minutes
-
-    Raises:
-        ValueError: If format is invalid
-    """
-    import re
-
-    # If it's already an integer, return it
-    if isinstance(step_size_str, int):
-        return step_size_str
-
-    # Try to parse as integer directly
-    try:
-        return int(step_size_str)
-    except ValueError:
-        pass
-
-    # Parse string format like '5m', '1h'
-    match = re.match(r"^(\d+)([smhd])$", str(step_size_str).lower())
-    if not match:
-        raise ValueError(
-            f"Invalid step size format: '{step_size_str}'. "
-            "Expected format: <number><unit> where unit is s(econds), m(inutes), h(ours), or d(ays), "
-            "or just a number in minutes. Examples: 5m, 15m, 1h, 30s, or 5"
-        )
-
-    value = int(match.group(1))
-    unit = match.group(2)
-
-    # Convert to minutes
-    if unit == "s":
-        minutes = value / 60.0
-    elif unit == "m":
-        minutes = value
-    elif unit == "h":
-        minutes = value * 60
-    elif unit == "d":
-        minutes = value * 1440
-    else:
-        raise ValueError(f"Unsupported time unit: {unit}")
-
-    if minutes < 1:
-        raise ValueError(
-            f"Step size must be at least 1 minute, got {minutes} minutes from '{step_size_str}'"
-        )
-
-    return int(minutes)
-
-
 def generate_timeseries(
     start_time, end_time, trend_coefficient, granularity_minutes=15, flat_base=5
 ):
     """Generate timeseries with specified trend coefficient and default seasonality/noise."""
-    trend = LinearTrend(
-        coefficient=trend_coefficient, time_unit=timedelta(hours=1), flat_base=flat_base
+    start_ts = pd.Timestamp(start_time)
+    total_minutes = int((end_time - start_time).total_seconds() / 60)
+    total_points = total_minutes // granularity_minutes
+    freq = f"{granularity_minutes * 60}s"
+
+    # Trend component (coefficient per hour)
+    total_hours = total_minutes / 60
+    end_trend_value = flat_base + trend_coefficient * total_hours
+    trend = linear_timeseries(
+        start_value=flat_base,
+        end_value=end_trend_value,
+        start=start_ts,
+        length=total_points,
+        freq=freq,
     )
 
-    seasonality = DailySeasonality(
-        {
-            timedelta(hours=0): 1.0,
-            timedelta(hours=2): 10.8,
-            timedelta(hours=4): 18.1,
-            timedelta(hours=6): 19.5,
-            timedelta(hours=8): 17.6,
-            timedelta(hours=10): 15.8,
-            timedelta(hours=12): 14.1,
-            timedelta(hours=14): 12.8,
-            timedelta(hours=16): 10.3,
-            timedelta(hours=18): 8.7,
-            timedelta(hours=20): 3.6,
-            timedelta(hours=22): 1.8,
-        }
+    # Seasonality component (daily sinusoidal approximation)
+    steps_per_day = int(24 * 60 / granularity_minutes)
+    seasonality = sine_timeseries(
+        value_frequency=1.0 / steps_per_day,
+        value_amplitude=9.25,
+        value_y_offset=10.25,
+        value_phase=np.pi,
+        start=start_ts,
+        length=total_points,
+        freq=freq,
     )
 
-    timeseries = trend + seasonality
-
-    time_points = datetime_range(
-        granularity=timedelta(minutes=granularity_minutes),
-        start_time=start_time,
-        end_time=end_time,
-    )
-    ts_values = timeseries.generate(time_points=time_points)
+    combined = trend + seasonality
+    pdf = combined.pd_dataframe()
+    ts_values = pdf.iloc[:, 0].values
+    time_points = list(pdf.index.to_pydatetime())
     return ts_values, time_points
-
-
-def get_base_url(env):
-    """Get base URL based on environment."""
-    env_lower = env.lower()
-    if env_lower in ("scale", "staging", "ci"):
-        return f"https://edge.{env_lower}.cdo.cisco.com"
-    elif env_lower == "us":
-        return "https://www.defenseorchestrator.com"
-    elif env_lower == "eu":
-        return "https://www.defenseorchestrator.eu"
-    else:
-        return f"https://www.{env_lower}.cdo.cisco.com"
 
 
 def get_remote_write_config(env):
@@ -341,7 +242,7 @@ def main():
 
     # Parse step size
     try:
-        step_size_minutes = parse_step_size(args.step_size)
+        step_size_minutes = parse_step_to_minutes(args.step_size)
     except ValueError as e:
         logging.error(f"Invalid step-size: {e}")
         sys.exit(1)

@@ -3,18 +3,21 @@ import logging
 import os.path
 import subprocess
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from datetime import timedelta
 from string import Template
 
+import numpy as np
+import pandas as pd
 from behave import *
-from mockseries.noise import GaussianNoise
-from mockseries.seasonality import DailySeasonality
-from mockseries.trend import LinearTrend
-from mockseries.utils import datetime_range
+from darts.utils.timeseries_generation import (
+    linear_timeseries,
+    sine_timeseries,
+)
 from features.steps.cdo_apis import get, post
 from features.steps.env import get_endpoints, Path
-from features.steps.utils import get_common_labels, is_data_present
+from features.steps.utils import get_common_labels, write_timeseries_yaml
+from shared.step_utils import parse_step_to_seconds
 
 t = Template(
     """# HELP $metric_name $description
@@ -24,7 +27,6 @@ $metric_name{$labels_2} $value $timestamp
 """
 )
 
-# TODO : Cleanup unused backfill RAV-VPN code after stability testing
 HISTORICAL_DATA_FILE = "ravpn_historical_data.txt"
 
 
@@ -33,11 +35,6 @@ def step_impl(context):
     if context.remote_write_config is None:
         logging.info("Remote write config not found. Skipping backfill.")
         assert False
-
-    # TODO : Remove post checking backfill behaviour for RA-VPN
-    # if is_device_present_with_ra_vpn_data(context):
-    #     assert True
-    #     return
 
     ts_values, time_points = generate_timeseries()
 
@@ -49,6 +46,16 @@ def step_impl(context):
 
     labels_1 = {**common_labels, "vpn": "active_ravpn_tunnels"}
     labels_2 = {**common_labels, "vpn": "inactive_ravpn_tunnels"}
+
+    # Write YAML debug output for both series
+    ts_df = pd.DataFrame({"ds": [tp.timestamp() for tp in time_points], "y": ts_values})
+    ts_features = {
+        "trend": "linear 5 -> ~58 over 21 days",
+        "seasonality": "daily sine, amplitude=9.25, offset=10.25",
+        "noise": False,
+    }
+    write_timeseries_yaml(context, metric_name, labels_1, ts_df, ts_features)
+    write_timeseries_yaml(context, metric_name, labels_2, ts_df, ts_features)
     description = "Currently active and inactive RAVPN tunnels"
     labels_1 = ",".join([f'{k}="{v}"' for k, v in labels_1.items()])
     labels_2 = ",".join([f'{k}="{v}"' for k, v in labels_2.items()])
@@ -83,8 +90,8 @@ def step_impl(context):
     logging.info(f"Backfill took {(end_time - start_time)/60:.2f} minutes")
 
     # Calculate the start and end times
-    start_time = datetime.now() - timedelta(days=21)
-    end_time = datetime.now() - timedelta(days=1)
+    start_time = datetime.now(timezone.utc) - timedelta(days=21)
+    end_time = datetime.now(timezone.utc) - timedelta(days=1)
 
     # Convert to epoch seconds
     start_time_epoch = int(start_time.timestamp())
@@ -168,11 +175,7 @@ def _get_total_data_points(start_epoch, end_epoch, query_string, step_size="1m")
         Dictionary with series names as keys and their total data point counts as values.
         Returns empty dict if no data found.
     """
-    # Parse step_size to seconds
-    step_mapping = {"s": 1, "m": 60, "h": 3600}
-    step_value = int(step_size[:-1])
-    step_unit = step_size[-1]
-    step_seconds = step_value * step_mapping.get(step_unit, 60)
+    step_seconds = parse_step_to_seconds(step_size)
 
     # Calculate total duration and expected data points
     total_duration = end_epoch - start_epoch
@@ -227,56 +230,48 @@ def _get_total_data_points(start_epoch, end_epoch, query_string, step_size="1m")
     return series_data_points
 
 
-def is_device_present_with_ra_vpn_data(context):
-    available_devices = [
-        device for device in context.devices if device.ra_vpn_enabled == True
-    ]
-    query = 'query=vpn{{uuid="{uuid}"}}'
-    for device in available_devices:
-        if is_data_present(
-            query.format(uuid=device.device_record_uid), timedelta(days=365), "60m"
-        ):
-            context.scenario_to_device_map[context.scenario] = device
-            logging.info(
-                "Device with RA-VPN data already present , Selected device: ", device
-            )
-            return True
-    return False
-
-
 def generate_timeseries():
-    # Trend component
-    trend = LinearTrend(coefficient=0.1, time_unit=timedelta(hours=0.95), flat_base=5)
+    start_time = pd.Timestamp(datetime.now(timezone.utc) - timedelta(days=21))
+    end_time = pd.Timestamp(datetime.now(timezone.utc))
+    total_minutes = int((end_time - start_time).total_seconds() / 60)
+    freq = "60s"
 
-    # Seasonality component
-    seasonality = DailySeasonality(
-        {
-            timedelta(hours=0): 1.0,
-            timedelta(hours=2): 10.8,
-            timedelta(hours=4): 18.1,
-            timedelta(hours=6): 19.5,
-            timedelta(hours=8): 17.6,
-            timedelta(hours=10): 15.8,
-            timedelta(hours=12): 14.1,
-            timedelta(hours=14): 12.8,
-            timedelta(hours=16): 10.3,
-            timedelta(hours=18): 8.7,
-            timedelta(hours=20): 3.6,
-            timedelta(hours=22): 1.8,
-        }
+    # Strip tz for darts (xarray doesn't support tz-aware timestamps)
+    start_time_naive = start_time.tz_localize(None)
+
+    # Trend component: linear from flat_base=5, increasing by 0.1 per 0.95 hours
+    # Over 21 days: end_value = 5 + 0.1 * (21*24/0.95) = 5 + 53.05 ≈ 58
+    total_hours = 21 * 24
+    end_trend_value = 5 + 0.1 * (total_hours / 0.95)
+    trend = linear_timeseries(
+        start_value=5,
+        end_value=end_trend_value,
+        start=start_time_naive,
+        length=total_minutes,
+        freq=freq,
     )
 
-    # Noise component
-    noise = GaussianNoise(mean=0, std=3, random_seed=42)
+    # Seasonality component: daily pattern approximated with sinusoidal
+    # Original DailySeasonality peaks around hour 6 (19.5) and troughs around hour 0 (1.0)
+    # Amplitude ≈ (19.5 - 1.0) / 2 ≈ 9.25, y_offset ≈ (19.5 + 1.0) / 2 ≈ 10.25
+    # Period = 1 day = 1440 minutes, so value_frequency = 1/1440
+    seasonality = sine_timeseries(
+        value_frequency=1.0 / 1440.0,
+        value_amplitude=9.25,
+        value_y_offset=10.25,
+        value_phase=np.pi,  # Phase shift to approximate original daily pattern
+        start=start_time_naive,
+        length=total_minutes,
+        freq=freq,
+    )
 
     # Combine components
-    timeseries = trend + seasonality + noise
+    combined = trend + seasonality
 
-    # Generate timeseries
-    time_points = datetime_range(
-        granularity=timedelta(minutes=1),
-        start_time=datetime.now() - timedelta(days=21),
-        end_time=datetime.now(),
-    )
-    ts_values = timeseries.generate(time_points=time_points)
+    # Convert to the format expected by callers: (ts_values, time_points)
+    # Re-localize to UTC for correct epoch conversion
+    pdf = combined.pd_dataframe()
+    pdf.index = pdf.index.tz_localize("UTC")
+    ts_values = pdf.iloc[:, 0].values
+    time_points = list(pdf.index.to_pydatetime())
     return ts_values, time_points
