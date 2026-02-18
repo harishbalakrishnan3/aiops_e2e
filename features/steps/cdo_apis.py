@@ -176,11 +176,11 @@ def verify_insight_type_and_state(context, insight_type, state):
                 return True
             else:
                 logging.debug(
-                    f"Expected insight type: {insight_type} - state: {state} - device name: {context.scenario_to_device_map[context.scenario].device_name} - device id: {context.scenario_to_device_map[context.scenario].aegis_device_uid}"
+                    f"Expected insight type: {insight_type} - state: {state} - device name: {context.scenario_to_device_map[context.scenario].device_name} - aegis device uid: {context.scenario_to_device_map[context.scenario].aegis_device_uid}"
                 )
                 logging.debug(f"Actual Insight: {insight}")
     logging.info(
-        f"Failed to find an insight with type: {insight_type} and state: {state} for device name: {context.scenario_to_device_map[context.scenario].device_name} and device id: {context.scenario_to_device_map[context.scenario].aegis_device_uid}"
+        f"Failed to find an insight with type: {insight_type} and state: {state} for device name: {context.scenario_to_device_map[context.scenario].device_name} and aegis device uid: {context.scenario_to_device_map[context.scenario].aegis_device_uid}"
     )
     return False
 
@@ -198,9 +198,13 @@ def get_onboard_status():
     return get(endpoints.TENANT_STATUS_V2_URL, print_body=True)
 
 
-def update_device_data(device_uid):
+def update_device_data(device_uid, device_record_uid):
     logging.info(f"Updating device data for {device_uid} to have 250 max sessions")
-    payload = {"device_uid": device_uid, "max_vpn_sessions": 250}
+    payload = {
+        "device_uid": device_uid,
+        "device_record_uid": device_record_uid,
+        "max_vpn_sessions": 250,
+    }
     return post(endpoints.CAPACITY_ANALYTICS_DEVICE_DATA_URL, json.dumps(payload), 201)
 
 
