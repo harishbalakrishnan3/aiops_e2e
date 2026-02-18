@@ -96,6 +96,10 @@ class Endpoints:
         self.CAPACITY_ANALYTICS_DEVICE_DATA_URL = (
             self.BASE_URL + "/api/platform/ai-ops-capacity-analytics/v1/device_data"
         )
+        self.CAPACITY_ANALYTICS_TRIGGER_URL = (
+            self.BASE_URL
+            + "/api/platform/ai-ops-capacity-analytics/v1/capacity-analysis"
+        )
 
 
 def get_endpoints():

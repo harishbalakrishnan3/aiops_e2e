@@ -1,4 +1,5 @@
 import copy
+import math
 import json
 import logging
 import os
@@ -209,7 +210,7 @@ def is_data_present(query: str, duration: timedelta, step="5m"):
 
     if expected_datapoints > MAX_PROMETHEUS_DATAPOINTS:
         step_seconds = total_duration_seconds // MAX_PROMETHEUS_DATAPOINTS
-        step_minutes = round(step_seconds / 60 / 10) * 10
+        step_minutes = math.ceil(step_seconds / 60 / 10) * 10
         step = f"{step_minutes}m"
         logging.info(
             f"Query would return {expected_datapoints} datapoints, increasing step to {step}"
@@ -364,6 +365,8 @@ def split_data_for_batch_and_live_ingestion(
 def check_if_data_present(
     metric_name: str, duration_delta: timedelta, labels: dict = {}
 ) -> bool:
+    MAX_PROMETHEUS_DATAPOINTS = 11000
+
     start_time = datetime.now(timezone.utc) - duration_delta
     end_time = datetime.now(timezone.utc)
 
@@ -371,16 +374,41 @@ def check_if_data_present(
     start_time_epoch = int(start_time.timestamp())
     end_time_epoch = int(end_time.timestamp())
 
-    query = f"?query={metric_name}{{{format_device_labels(labels)}}}&start={start_time_epoch}&end={end_time_epoch}&step=5m"
-    return start_polling(query=query, retry_count=60, retry_frequency_seconds=60)
+    total_duration_seconds = int(duration_delta.total_seconds())
+    step = "5m"
+    step_seconds = 300
+
+    expected_datapoints = total_duration_seconds // step_seconds
+    if expected_datapoints > MAX_PROMETHEUS_DATAPOINTS:
+        step_seconds = total_duration_seconds // MAX_PROMETHEUS_DATAPOINTS
+        step_minutes = math.ceil(step_seconds / 60 / 10) * 10
+        step = f"{step_minutes}m"
+        logging.info(
+            f"Query would return {expected_datapoints} datapoints, increasing step to {step}"
+        )
+
+    expected_datapoints = total_duration_seconds // parse_step_to_seconds(step)
+    query = f"?query={metric_name}{{{format_device_labels(labels)}}}&start={start_time_epoch}&end={end_time_epoch}&step={step}"
+    return start_polling(
+        query=query,
+        expected_datapoints=expected_datapoints,
+        retry_count=60,
+        retry_frequency_seconds=60,
+    )
 
 
-def start_polling(query: str, retry_count: int, retry_frequency_seconds: int) -> bool:
+def start_polling(
+    query: str, expected_datapoints: int, retry_count: int, retry_frequency_seconds: int
+) -> bool:
     endpoint = get_endpoints().PROMETHEUS_RANGE_QUERY_URL + query
+    min_datapoints = int(expected_datapoints * 0.96)
 
     count = 0
     success = False
     logging.info(f"Polling data store with PromQL: {query}")
+    logging.info(
+        f"Expected ~{expected_datapoints} datapoints, minimum threshold (96%%): {min_datapoints}"
+    )
     while True:
         # Exit after 60 minutes
         if count > retry_count:
@@ -394,13 +422,15 @@ def start_polling(query: str, retry_count: int, retry_frequency_seconds: int) ->
         response = get(endpoint, print_body=False)
         if len(response["data"]["result"]) > 0:
             num_data_points = len(response["data"]["result"][0]["values"])
-            logging.debug(f"Active data points: {num_data_points}.")
-            if num_data_points > 3900:
+            logging.info(f"Active data points: {num_data_points}.")
+            if num_data_points > min_datapoints:
                 success = True
                 logging.info(
                     f"Total time taken to ingest data: {count * retry_frequency_seconds/60} minutes"
                 )
                 break
+        else:
+            logging.info("Number of datapoints obtained was zero")
 
         time.sleep(retry_frequency_seconds)
         # TODO: Ingest live data till backfill data is available

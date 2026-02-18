@@ -259,6 +259,11 @@ def step_impl(context, module_name, method):
         )
 
 
+@step("trigger capacity analytics workflow")
+def step_impl(context):
+    post(get_endpoints().CAPACITY_ANALYTICS_TRIGGER_URL, expected_return_code=202)
+
+
 @step(
     "prepare backfill metrics for {scenario} for a suitable device over {duration} hour(s)"
 )
@@ -281,8 +286,13 @@ def step_impl(context):
 def step_impl(context, duration):
     duration_delta = timedelta(hours=int(duration))
     generated_data_list = generate_data_for_input(context, duration_delta)
+    backfill_start = time.time()
     backfill_generated_data(context, generated_data_list)
+    backfill_elapsed = time.time() - backfill_start
+    logging.info(f"Backfill completed in {backfill_elapsed / 60:.1f} minutes")
     assert check_if_backfilled_data_present(generated_data_list)
+    total_elapsed = time.time() - backfill_start
+    logging.info(f"Total time (backfill + ingestion): {total_elapsed / 60:.1f} minutes")
 
 
 def check_if_backfilled_data_present(generated_data_list: List[GeneratedData]):
@@ -353,7 +363,7 @@ def generate_data_for_input(context, duration_delta: timedelta) -> List[Generate
             row["metric_type"] if "metric_type" in context.table.headings else "gauge"
         )
         amplitude = (
-            int(row["amplitude"]) if "amplitude" in context.table.headings else 20
+            float(row["amplitude"]) if "amplitude" in context.table.headings else 20
         )
 
         start_time = datetime.now(timezone.utc) - duration_delta
