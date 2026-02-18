@@ -62,5 +62,21 @@
   "CONNECTIONS_ANOMALY_HA": {
     "device_filter": "HA_PAIR",
     "query": "query=conn_stats{{uuid=\"{uuid}\"}}"
+  },
+  "CAPACITY_ANALYTICS_LINA_CPU": {
+    "device_filter": "standalone",
+    "query": "query=cpu{{cpu=\"lina_dp_avg\", uuid=\"{uuid}\"}}"
+  },
+  "CAPACITY_ANALYTICS_LINA_MEMORY": {
+    "device_filter": "standalone",
+    "query": "query=mem{{mem=\"used_percentage_lina\", uuid=\"{uuid}\"}}"
+  },
+  "CAPACITY_ANALYTICS_SNORT_CPU": {
+    "device_filter": "standalone",
+    "query": "query=cpu{{cpu=\"snort_avg\", uuid=\"{uuid}\"}}"
+  },
+  "CAPACITY_ANALYTICS_SNORT_MEMORY": {
+    "device_filter": "standalone",
+    "query": "query=mem{{mem=\"used_percentage_snort\", uuid=\"{uuid}\"}}"
   }
 }

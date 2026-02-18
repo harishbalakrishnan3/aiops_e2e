@@ -48,4 +48,14 @@ class ScenarioEnum(str, Enum):
     )
     CONNECTIONS_ANOMALY_STANDALONE = "Test CONNECTIONS_ANOMALY for standalone device"
     CONNECTIONS_ANOMALY_HA = "Test CONNECTIONS_ANOMALY for HA device"
+    CAPACITY_ANALYTICS_LINA_CPU = "Test forecast insight generation for Lina CPU metric"
+    CAPACITY_ANALYTICS_LINA_MEMORY = (
+        "Test forecast insight generation for Lina Memory metric"
+    )
+    CAPACITY_ANALYTICS_SNORT_CPU = (
+        "Test forecast insight generation for Snort CPU metric"
+    )
+    CAPACITY_ANALYTICS_SNORT_MEMORY = (
+        "Test forecast insight generation for Snort Memory metric"
+    )
     UNKNOWN_SCENARIO = "Unknown scenario"
