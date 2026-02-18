@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from pydantic import BaseModel
 
 from features.model import Device, ScenarioEnum
-from features.steps.cdo_apis import get, update_device_data
+from features.steps.cdo_apis import get
 from features.steps.env import Path, get_endpoints
 from shared.label_utils import format_labels
 from shared.step_utils import parse_step_to_seconds
@@ -124,8 +124,6 @@ def get_common_labels(context, duration: timedelta):
             device.aegis_device_uid,
             device.device_record_uid,
         )
-        if context.scenario == ScenarioEnum.RAVPN_FORECAST:
-            update_device_data(device.aegis_device_uid)
         context.scenario_to_device_map[context.scenario] = device
         # Track device as used globally to minimize overlap across scenarios
         if hasattr(context, "used_devices"):
