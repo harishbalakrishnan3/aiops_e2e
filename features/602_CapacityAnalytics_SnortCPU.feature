@@ -9,5 +9,6 @@ Feature: Capacity Analytics
     Then backfill metrics for a suitable device over 2160 hour(s)
       | metric_name            | label_values                              | start_value | end_value | start_spike_minute | spike_duration_minutes | seasonality_period_hours | amplitude |
       | cpu                    | cpu=snort_avg                             | 15.25       | 60.72     | 0                  | 129600                 | 24                       | 9.25      |
+    Then wait for 5 minutes
     Then trigger capacity analytics workflow
     Then verify if an CPU_SNORT_THRESHOLD_FORECAST_BREACH insight with state ACTIVE is created with a timeout of 60 minute(s)
