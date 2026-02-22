@@ -192,7 +192,7 @@ def before_feature(context, feature):
         shutil.rmtree(feature_dir)
         logging.info(f"Cleaned output directory: {feature_dir}")
 
-    if feature.name == "Testing RA-VPN forecasting":
+    if feature.name == "Capacity Analytics RAVPN":
         # Lazily discover RAVPN devices only when this feature runs
         discover_ravpn_devices(context)
         for device in context.devices:
@@ -203,11 +203,11 @@ def before_feature(context, feature):
             "moduleName": "RAVPN_MAX_SESSIONS_BREACH_FORECAST",
             "enable": True,
             "severity": "AUTO",
-            "forecastDurationInDays": 30,
+            "forecastDurationInDays": 60,
             "maxSessionsThreshold": 100.0,
             "accuracyLevel": "LOW",
-            "minimumTrainingPeriodInDays": 7,
-            "historyDurationInDays": 21,
+            "minimumTrainingPeriodInDays": 14,
+            "historyDurationInDays": 90,
         }
         update_module_settings("ravpn-capacity-forecast", module_settings)
     elif feature.name == "Testing Anomaly Detection":

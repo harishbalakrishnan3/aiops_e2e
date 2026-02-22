@@ -48,8 +48,7 @@ def _filter_devices_by_type(devices: list, device_filter: str) -> list:
     """Filter devices based on the device_filter from prerequisites config.
 
     For non-ravpn filters, devices with RAVPN enabled are deprioritised so they
-    remain available for the RAVPN scenario (which needs a fresh device every
-    daily Jenkins run over a 21-day backfill window).
+    remain available for the RAVPN capacity analytics scenario.
     """
     if device_filter == "ravpn":
         return [d for d in devices if d.ra_vpn_enabled]
