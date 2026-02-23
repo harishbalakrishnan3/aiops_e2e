@@ -208,10 +208,6 @@ t = Template(
 
 
 module_name_to_subscriber = {
-    "RAVPN": {
-        "subscriber": "RAVPN_MAX_SESSIONS_BREACH_FORECAST",
-        "destination": "ai-ops-forecast",
-    },
     "CONNECTIONS": {
         "subscriber": "CONNECTIONS_ANOMALY",
         "destination": "ai-ops-anomaly-detection",
